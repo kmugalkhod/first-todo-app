@@ -244,60 +244,6 @@ export function Taskspace({
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
       <div className="min-w-0">
-        {canEdit ? (
-          <div className="mb-2 flex justify-end">
-            {creatingSection ? (
-              <form
-                onSubmit={submitCreateSection}
-                className="flex w-full items-center gap-2 rounded-lg border border-input bg-background px-2.5 py-1.5 focus-within:ring-3 focus-within:ring-[#ff765d]/40"
-              >
-                <Plus className="size-4 shrink-0 text-[#edff81] mix-blend-multiply dark:mix-blend-screen" />
-                <input
-                  autoFocus
-                  value={sectionDraft}
-                  onChange={(event) => setSectionDraft(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Escape") {
-                      setCreatingSection(false);
-                      setSectionDraft("");
-                    }
-                  }}
-                  placeholder="Section name"
-                  aria-label="New section name"
-                  className="h-7 w-full bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
-                />
-                <button
-                  type="submit"
-                  className="rounded-md px-2 py-0.5 text-[0.68rem] font-bold text-[#5963ae] hover:bg-muted"
-                >
-                  Add section
-                </button>
-                <button
-                  type="button"
-                  aria-label="Cancel new section"
-                  onClick={() => {
-                    setCreatingSection(false);
-                    setSectionDraft("");
-                  }}
-                  className={cn(CONTROL_CLASS, "size-6")}
-                >
-                  <X className="size-4" />
-                </button>
-              </form>
-            ) : (
-              <button
-                type="button"
-                disabled={busyIds.has("__reorder__")}
-                onClick={() => setCreatingSection(true)}
-                className="flex items-center gap-1.5 rounded-lg border border-input bg-background px-3 py-1.5 text-[0.75rem] font-semibold text-[#5963ae] transition-colors hover:border-[#c6c9f5] hover:bg-[#eef0fb] hover:text-[#252d95] focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[#ff765d] focus-visible:ring-offset-2"
-              >
-                <Plus className="size-3.5" />
-                New section
-              </button>
-            )}
-          </div>
-        ) : null}
-
         {isEmpty ? (
           <div className="flex flex-col items-start gap-3 border-y border-dashed border-border py-10">
             <span className="flex size-10 items-center justify-center rounded-full bg-muted text-muted-foreground">
@@ -326,72 +272,68 @@ export function Taskspace({
 
               return (
                 <section key={group.key} aria-label={group.label}>
-                  <header className="flex items-center justify-between gap-4 py-2.5">
-                    {renamingThis ? (
-                      <form
-                        onSubmit={submitRename}
-                        className="flex w-full items-center gap-2"
-                      >
-                        <input
-                          autoFocus
-                          value={renameDraft}
-                          onChange={(event) => setRenameDraft(event.target.value)}
-                          onKeyDown={(event) => {
-                            if (event.key === "Escape") {
-                              setRenamingId(null);
-                            }
-                          }}
-                          aria-label="Rename section"
-                          className="h-7 min-w-0 flex-1 rounded-md border border-input bg-background px-2 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-[#ff765d]"
-                        />
-                        <button
-                          type="submit"
-                          aria-label="Save section name"
-                          className={cn(CONTROL_CLASS)}
+                  <header className="flex items-center justify-between gap-3 border-b border-[#dfe2ef] py-2.5 dark:border-[#2a2f4a]">
+                    <div className="flex min-w-0 items-baseline gap-2">
+                      {renamingThis ? (
+                        <form
+                          onSubmit={submitRename}
+                          className="flex w-full items-center gap-2"
                         >
-                          <Check className="size-4" />
-                        </button>
-                        <NoiseButton
-                          aria-label="Cancel rename"
-                          onClick={() => setRenamingId(null)}
-                        >
-                          <X className="size-4" />
-                        </NoiseButton>
-                      </form>
-                    ) : (
-                      <h2
-                        className={cn(
-                          "flex items-center gap-2 font-semibold tracking-[-0.01em]",
-                          group.sectionId != null
-                            ? "text-sm text-foreground"
-                            : "text-[0.62rem] font-[760] uppercase tracking-[0.08em] text-muted-foreground",
-                        )}
-                      >
-                        {group.label}
-                        {group.tasks.length > 0 ? (
-                          <span
+                          <input
+                            autoFocus
+                            value={renameDraft}
+                            onChange={(event) => setRenameDraft(event.target.value)}
+                            onKeyDown={(event) => {
+                              if (event.key === "Escape") {
+                                setRenamingId(null);
+                              }
+                            }}
+                            aria-label="Rename section"
+                            className="h-7 w-full rounded-md border border-input bg-background px-2 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-[#ff765d]"
+                          />
+                          <button
+                            type="submit"
+                            aria-label="Save section name"
+                            className={cn(CONTROL_CLASS)}
+                          >
+                            <Check className="size-4" />
+                          </button>
+                          <NoiseButton
+                            aria-label="Cancel rename"
+                            onClick={() => setRenamingId(null)}
+                          >
+                            <X className="size-4" />
+                          </NoiseButton>
+                        </form>
+                      ) : (
+                        <>
+                          <h2
                             className={cn(
-                              "rounded-full px-2 py-0.5 text-[0.6rem] font-semibold",
+                              "truncate font-semibold tracking-[-0.025em]",
                               group.sectionId != null
-                                ? "bg-[#eef0fb] text-[#4a52a8]"
-                                : "bg-muted text-muted-foreground",
+                                ? "text-[0.95rem] text-[#202550] dark:text-foreground"
+                                : "text-[0.7rem] uppercase tracking-[0.07em] text-[#8790ac] dark:text-muted-foreground",
                             )}
                           >
-                            {group.tasks.length}
+                            {group.sectionId != null
+                              ? group.label
+                              : "No section"}
+                          </h2>
+                          <span className="shrink-0 text-[0.65rem] font-bold text-[#8790ac] dark:text-muted-foreground">
+                            {group.tasks.length}{" "}
+                            {group.tasks.length === 1 ? "task" : "tasks"}
                           </span>
-                        ) : null}
-                      </h2>
-                    )}
+                        </>
+                      )}
+                    </div>
 
-                    <div className="flex items-center gap-1">
+                    <div className="flex shrink-0 items-center gap-0.5">
                       {isRealSection && canEdit && !renamingThis ? (
                         <>
                           <button
                             type="button"
                             aria-label={`Move ${group.label} up`}
-                            disabled={
-                              isFirst || busyIds.has("__reorder__")
-                            }
+                            disabled={isFirst || busyIds.has("__reorder__")}
                             onClick={() => moveSection(group.sectionId!, -1)}
                             className={cn(CONTROL_CLASS)}
                           >
@@ -400,9 +342,7 @@ export function Taskspace({
                           <button
                             type="button"
                             aria-label={`Move ${group.label} down`}
-                            disabled={
-                              isLast || busyIds.has("__reorder__")
-                            }
+                            disabled={isLast || busyIds.has("__reorder__")}
                             onClick={() => moveSection(group.sectionId!, 1)}
                             className={cn(CONTROL_CLASS)}
                           >
@@ -436,7 +376,7 @@ export function Taskspace({
                         </>
                       ) : null}
 
-                      {canEdit && (
+                      {canEdit && !renamingThis ? (
                         <button
                           type="button"
                           onClick={() => {
@@ -445,12 +385,12 @@ export function Taskspace({
                             );
                             if (composingKey !== group.key) setDraft("");
                           }}
-                          className="flex items-center gap-1 rounded-md px-1.5 py-1 text-[0.68rem] font-[760] text-[#5963ae] transition-colors hover:bg-muted hover:text-[#252d95] focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[#ff765d] focus-visible:ring-offset-2"
+                          className="ml-1 flex items-center gap-1 rounded-md border-0 bg-transparent p-1 text-[0.68rem] font-bold text-[#5965bd] transition-colors hover:text-[#252d95] focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[#ff765d] dark:text-[#8b93d6] dark:hover:text-[#c3c9ff]"
                         >
                           <Plus className="size-3.5" />
                           Add task
                         </button>
-                      )}
+                      ) : null}
                     </div>
                   </header>
 
@@ -523,8 +463,8 @@ export function Taskspace({
                   ) : (
                     composingKey !== group.key &&
                     !deletingThis && (
-                      <p className="py-4 text-sm text-muted-foreground">
-                        No tasks in this section.
+                      <p className="px-1 py-4 text-[0.72rem] text-[#8189a4] dark:text-muted-foreground">
+                        No open work in this section.
                       </p>
                     )
                   )}
@@ -533,6 +473,62 @@ export function Taskspace({
             })}
           </div>
         )}
+
+        {canEdit ? (
+          <div className={cn("mt-7", isEmpty && "mt-5")}>
+            {creatingSection ? (
+              <form
+                onSubmit={submitCreateSection}
+                className="flex w-full items-center gap-2 rounded-lg border border-[#d7dcf1] bg-[#eef0ff]/50 px-2.5 py-1.5 focus-within:ring-3 focus-within:ring-[#ff765d]/40 dark:bg-[#eef0ff]/10"
+              >
+                <Plus
+                  className="size-4 shrink-0 text-[#5963ae] dark:text-[#8b93d6]"
+                />
+                <input
+                  autoFocus
+                  value={sectionDraft}
+                  onChange={(event) => setSectionDraft(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Escape") {
+                      setCreatingSection(false);
+                      setSectionDraft("");
+                    }
+                  }}
+                  placeholder="Section name"
+                  aria-label="New section name"
+                  className="h-7 w-full bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
+                />
+                <button
+                  type="submit"
+                  className="rounded-md px-2 py-0.5 text-[0.68rem] font-bold text-[#5963ae] hover:bg-[#dfe3ff] dark:hover:bg-[#ffffff12]"
+                >
+                  Add section
+                </button>
+                <button
+                  type="button"
+                  aria-label="Cancel new section"
+                  onClick={() => {
+                    setCreatingSection(false);
+                    setSectionDraft("");
+                  }}
+                  className={cn(CONTROL_CLASS, "size-6")}
+                >
+                  <X className="size-4" />
+                </button>
+              </form>
+            ) : (
+              <button
+                type="button"
+                disabled={busyIds.has("__reorder__")}
+                onClick={() => setCreatingSection(true)}
+                className="flex items-center gap-1.5 rounded-md border-0 bg-transparent p-0 text-[0.72rem] font-bold text-[#5965bd] transition-colors hover:text-[#252d95] focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[#ff765d] focus-visible:ring-offset-2 dark:text-[#8b93d6] dark:hover:text-[#c3c9ff]"
+              >
+                <Plus className="size-3.5" />
+                New section
+              </button>
+            )}
+          </div>
+        ) : null}
       </div>
 
       <div className={cn("min-w-0", !selected && "lg:hidden")}>

@@ -153,15 +153,67 @@ export default async function TaskspaceHome({
   const canEdit =
     loadedProject.myRole === "owner" || loadedProject.myRole === "editor";
 
+  // Prototype-Final match: the project's real people power the heading's meta
+  // bar (DESIGN.md). Active members drive the avatar stack + count; the owner
+  // is named so the workspace reads as a shared, owned space from the first
+  // viewport (matching the taskspace-momentum-prototype's exposed member row).
+  const activeMembers = members.filter((member) => member.status === "active");
+  const owner = activeMembers.find((member) => member.role === "owner");
+  const ownerName = owner ? (owner.name ?? owner.email) : null;
+  const memberLabel =
+    activeMembers.length === 1 ? "1 member" : `${activeMembers.length} members`;
+
   return (
-    <main className="mx-auto w-full max-w-[1200px] px-4 py-6 sm:px-8">
-      <Taskspace
-        projectId={projectId}
-        projectName={loadedProject.name}
-        meUserId={user.id}
-        canEdit={canEdit}
-        groups={groups}
-      />
+    <main className="mx-auto w-full max-w-[1200px] px-4 py-8 sm:px-8">
+      <header className="flex items-start justify-between gap-6">
+        <div className="min-w-0">
+          <p className="text-[0.66rem] font-bold uppercase tracking-[0.09em] text-[#8790ac] dark:text-muted-foreground">
+            Projects
+          </p>
+          <h1 className="font-heading mt-2 text-5xl font-extrabold leading-[0.94] tracking-[-0.06em] text-[#202550] dark:text-foreground sm:text-6xl">
+            {loadedProject.name}
+          </h1>
+          {loadedProject.description ? (
+            <p className="mt-3 max-w-md text-sm leading-relaxed text-[#69718d] dark:text-muted-foreground">
+              {loadedProject.description}
+            </p>
+          ) : null}
+        </div>
+      </header>
+
+      <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-2 border-y border-[#dfe2ef] py-3 text-[0.68rem] font-bold text-[#6d7594] dark:border-[#2a2f4a] dark:text-muted-foreground">
+        <span className="flex items-center gap-2">
+          <span className="flex -space-x-1.5">
+            {activeMembers.slice(0, 4).map((member) => (
+              <span
+                key={member.userId}
+                title={member.name ?? member.email}
+                className="grid size-6 place-items-center rounded-full border-2 border-[#fbfbff] bg-[#a9b0ee] text-[0.6rem] font-extrabold text-[#202550] dark:border-[#1f2346] dark:bg-[#3a428f] dark:text-[#dfe1ff]"
+              >
+                {(member.name ?? member.email).charAt(0).toUpperCase()}
+              </span>
+            ))}
+          </span>
+          <span>{memberLabel}</span>
+        </span>
+        {ownerName ? <span>Owner · {ownerName}</span> : null}
+        {canEdit ? null : (
+          <span className="flex items-center gap-1.5">
+            <i aria-hidden="true" className="size-1.5 rounded-full bg-[#ff765d]" />
+            View-only
+          </span>
+        )}
+      </div>
+
+      <div className="mt-4">
+        <Taskspace
+          projectId={projectId}
+          projectName={loadedProject.name}
+          meUserId={user.id}
+          canEdit={canEdit}
+          groups={groups}
+        />
+      </div>
     </main>
   );
 }
