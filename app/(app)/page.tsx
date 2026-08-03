@@ -11,17 +11,9 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-import { AppSidebar } from "@/components/sidebar/app-sidebar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  SidebarInset,
-  SidebarProvider,
-  SidebarTrigger,
-} from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
-import { ModeToggle } from "@/feature/components/toggle";
-import { SignOutButton } from "@/components/sign-out-button";
 
 type Filter = "all" | "active" | "completed";
 
@@ -139,29 +131,12 @@ export default function Home() {
   }
 
   return (
-    <SidebarProvider>
-      <AppSidebar openTaskCount={openTaskCount} />
-      <SidebarInset className="min-h-svh bg-background">
-        <header className="flex h-16 items-center justify-between border-b border-border/80 bg-background/95 px-4 sm:px-6">
-          <div className="flex items-center gap-3">
-            <SidebarTrigger className="size-9 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground" />
-            <div className="hidden h-5 w-px bg-border sm:block" />
-            <p className="hidden text-sm font-medium text-muted-foreground sm:block">
-              Your day, in focus
-            </p>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <SignOutButton className="size-9 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground" />
-            <ModeToggle />
-          </div>
-        </header>
-
-        <main className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-8 sm:py-12 lg:px-12">
+    <main className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-8 sm:py-12 lg:px-12">
           <section className="flex flex-col gap-6">
             <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <p className="text-sm font-medium text-primary">Today</p>
-                <h1 className="mt-1 text-3xl font-semibold tracking-[-0.03em] text-foreground sm:text-4xl">
+                <h1 className="font-heading mt-1 text-3xl font-semibold tracking-[-0.03em] text-foreground sm:text-4xl">
                   Make room for what matters.
                 </h1>
                 <p className="mt-3 max-w-xl text-[0.98rem] leading-7 text-muted-foreground">
@@ -331,7 +306,5 @@ export default function Home() {
             )}
           </section>
         </main>
-      </SidebarInset>
-    </SidebarProvider>
   );
 }
