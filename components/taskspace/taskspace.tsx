@@ -234,80 +234,85 @@ export function Taskspace({
     );
   }
 
-  const isEmpty = state.every((group) => group.tasks.length === 0);
+  // The workspace is only "empty" when there are no sections and no tasks at
+  // all — a section that the editor just created shows even while it holds zero
+  // tasks, so the New section control stays visible instead of being masked.
+  const hasSections = state.some((group) => group.sectionId != null);
+  const hasTasks = state.some((group) => group.tasks.length > 0);
+  const isEmpty = !hasSections && !hasTasks;
 
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
       <div className="min-w-0">
+        {canEdit ? (
+          <div className="mb-2 flex justify-end">
+            {creatingSection ? (
+              <form
+                onSubmit={submitCreateSection}
+                className="flex w-full items-center gap-2 rounded-lg border border-input bg-background px-2.5 py-1.5 focus-within:ring-3 focus-within:ring-[#ff765d]/40"
+              >
+                <Plus className="size-4 shrink-0 text-[#edff81] mix-blend-multiply dark:mix-blend-screen" />
+                <input
+                  autoFocus
+                  value={sectionDraft}
+                  onChange={(event) => setSectionDraft(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Escape") {
+                      setCreatingSection(false);
+                      setSectionDraft("");
+                    }
+                  }}
+                  placeholder="Section name"
+                  aria-label="New section name"
+                  className="h-7 w-full bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
+                />
+                <button
+                  type="submit"
+                  className="rounded-md px-2 py-0.5 text-[0.68rem] font-bold text-[#5963ae] hover:bg-muted"
+                >
+                  Add section
+                </button>
+                <button
+                  type="button"
+                  aria-label="Cancel new section"
+                  onClick={() => {
+                    setCreatingSection(false);
+                    setSectionDraft("");
+                  }}
+                  className={cn(CONTROL_CLASS, "size-6")}
+                >
+                  <X className="size-4" />
+                </button>
+              </form>
+            ) : (
+              <button
+                type="button"
+                disabled={busyIds.has("__reorder__")}
+                onClick={() => setCreatingSection(true)}
+                className="flex items-center gap-1.5 rounded-lg border border-input bg-background px-3 py-1.5 text-[0.75rem] font-semibold text-[#5963ae] transition-colors hover:border-[#c6c9f5] hover:bg-[#eef0fb] hover:text-[#252d95] focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[#ff765d] focus-visible:ring-offset-2"
+              >
+                <Plus className="size-3.5" />
+                New section
+              </button>
+            )}
+          </div>
+        ) : null}
+
         {isEmpty ? (
           <div className="flex flex-col items-start gap-3 border-y border-dashed border-border py-10">
             <span className="flex size-10 items-center justify-center rounded-full bg-muted text-muted-foreground">
               <ListChecks className="size-5" />
             </span>
-            <h2 className="text-base font-semibold text-foreground">
+            <h2 className="font-heading text-lg font-semibold tracking-[-0.02em] text-foreground">
               Nothing here yet
             </h2>
             <p className="text-sm leading-6 text-muted-foreground">
-              Add a task with the &ldquo;+ Add task&rdquo; control, or pick
-              another project.
+              Create your first section with &ldquo;New section&rdquo;, then add
+              tasks with &ldquo;+ Add task&rdquo;.
             </p>
           </div>
         ) : (
           <div className="flex flex-col">
-            {canEdit ? (
-              <div className="mb-2 flex justify-end">
-                {creatingSection ? (
-                  <form
-                    onSubmit={submitCreateSection}
-                    className="flex w-full items-center gap-2 rounded-lg border border-input bg-background px-2.5 py-1.5 focus-within:ring-3 focus-within:ring-[#ff765d]/40"
-                  >
-                    <Plus className="size-4 shrink-0 text-[#edff81] mix-blend-multiply dark:mix-blend-screen" />
-                    <input
-                      autoFocus
-                      value={sectionDraft}
-                      onChange={(event) => setSectionDraft(event.target.value)}
-                      onKeyDown={(event) => {
-                        if (event.key === "Escape") {
-                          setCreatingSection(false);
-                          setSectionDraft("");
-                        }
-                      }}
-                      placeholder="Section name"
-                      aria-label="New section name"
-                      className="h-7 w-full bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
-                    />
-                    <button
-                      type="submit"
-                      className="rounded-md px-2 py-0.5 text-[0.68rem] font-bold text-[#5963ae] hover:bg-muted"
-                    >
-                      Add section
-                    </button>
-                    <button
-                      type="button"
-                      aria-label="Cancel new section"
-                      onClick={() => {
-                        setCreatingSection(false);
-                        setSectionDraft("");
-                      }}
-                      className={cn(CONTROL_CLASS, "size-6")}
-                    >
-                      <X className="size-4" />
-                    </button>
-                  </form>
-                ) : (
-                  <button
-                    type="button"
-                    disabled={busyIds.has("__reorder__")}
-                    onClick={() => setCreatingSection(true)}
-                    className="flex items-center gap-1 rounded-md px-2 py-1 text-[0.68rem] font-[760] text-[#5963ae] transition-colors hover:bg-muted hover:text-[#252d95] focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[#ff765d] focus-visible:ring-offset-2"
-                  >
-                    <Plus className="size-3.5" />
-                    New section
-                  </button>
-                )}
-              </div>
-            ) : null}
-
             {state.map((group) => {
               const isRealSection = group.sectionId != null;
               const sectionIds = state
@@ -354,10 +359,24 @@ export function Taskspace({
                         </NoiseButton>
                       </form>
                     ) : (
-                      <h2 className="flex items-center gap-2 text-[0.62rem] font-[760] uppercase tracking-[0.08em] text-muted-foreground">
+                      <h2
+                        className={cn(
+                          "flex items-center gap-2 font-semibold tracking-[-0.01em]",
+                          group.sectionId != null
+                            ? "text-sm text-foreground"
+                            : "text-[0.62rem] font-[760] uppercase tracking-[0.08em] text-muted-foreground",
+                        )}
+                      >
                         {group.label}
                         {group.tasks.length > 0 ? (
-                          <span className="rounded-full bg-muted px-2 py-0.5 text-[0.6rem] font-semibold">
+                          <span
+                            className={cn(
+                              "rounded-full px-2 py-0.5 text-[0.6rem] font-semibold",
+                              group.sectionId != null
+                                ? "bg-[#eef0fb] text-[#4a52a8]"
+                                : "bg-muted text-muted-foreground",
+                            )}
+                          >
                             {group.tasks.length}
                           </span>
                         ) : null}
