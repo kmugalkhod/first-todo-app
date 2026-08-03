@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,8 +10,26 @@ import { authClient } from "@/lib/auth/client";
 
 const GOOGLE_ENABLED = process.env.NEXT_PUBLIC_GOOGLE_ENABLED === "true";
 
+/**
+ * Return a same-origin relative path for the post-sign-in redirect, or
+ * `undefined` iff the value is unsafe (external URL / protocol-relative), so an
+ * attacker-supplied `next` can never become an open redirect.
+ */
+function safeRelativeNext(raw: string | null): string | undefined {
+  if (!raw) return undefined;
+  // Reject protocol-relative and absolute-URL values.
+  if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(raw) || raw.startsWith("//")) {
+    return undefined;
+  }
+  // Must be a path on the app origin.
+  if (!raw.startsWith("/")) return undefined;
+  return raw;
+}
+
 export default function SignInPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const callback = safeRelativeNext(searchParams.get("next"));
   const [email, setEmail] = React.useState("");
   const [sent, setSent] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
@@ -27,7 +45,12 @@ export default function SignInPage() {
     event.preventDefault();
     setError(null);
     setLoading(true);
-    const { error: signInError } = await authClient.signIn.magicLink({ email });
+    const { error: signInError } = await authClient.signIn.magicLink({
+      email,
+      // Continue a signed-out invitee (or a brand-new account) back to the
+      // invitation link after they authenticate (Task 0203).
+      ...(callback ? { callbackURL: callback, newUserCallbackURL: callback } : {}),
+    });
     setLoading(false);
     if (signInError) {
       setError(signInError.message ?? "Something went wrong. Please try again.");

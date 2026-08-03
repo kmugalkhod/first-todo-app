@@ -1,7 +1,7 @@
 import "server-only";
 
 import { createHash, randomBytes } from "node:crypto";
-import { and, eq, lte } from "drizzle-orm";
+import { and, desc, eq, lte } from "drizzle-orm";
 
 import {
   db,
@@ -9,6 +9,7 @@ import {
   invitationRoleEnum,
   invitationStatusEnum,
   projectMemberships,
+  projects,
   users,
 } from "@/lib/db";
 import { assertPermission } from "./access";
@@ -225,6 +226,78 @@ export async function findInvitationByToken(token: string): Promise<InvitationDT
   return findByTokenHash(hashToken(token));
 }
 
+/** Invitation joined with the human-readable project + inviter names. */
+export type InvitationDetailDTO = {
+  invitation: InvitationDTO;
+  projectName: string;
+  invitedByName: string | null;
+  /** True when the invitation is past its `expiresAt` (computed server-side). */
+  isExpired: boolean;
+};
+
+/**
+ * Resolve a raw token (from the emailed link) to its invitation plus project
+ * and inviter names for display. Never returns the raw token. Status/expiry are
+ * intentionally NOT checked so callers can show the settled/expired state;
+ * `isExpired` is computed here so UI components stay render-pure.
+ */
+export async function getInvitationDetailByToken(
+  token: string,
+): Promise<InvitationDetailDTO | null> {
+  const [row] = await db
+    .select({
+      inv: invitations,
+      projectName: projects.name,
+      invitedByName: users.displayName,
+    })
+    .from(invitations)
+    .innerJoin(projects, eq(projects.id, invitations.projectId))
+    .leftJoin(users, eq(users.id, invitations.invitedBy))
+    .where(eq(invitations.tokenHash, hashToken(token)))
+    .limit(1);
+
+  if (!row) return null;
+  return {
+    invitation: toInvitationDTO(row.inv),
+    projectName: row.projectName,
+    invitedByName: row.invitedByName,
+    isExpired: row.inv.expiresAt.getTime() < Date.now(),
+  };
+}
+
+/**
+ * List the actor's pending invitations (invitee-facing surface, Task 0203).
+ * Scoped to the actor's own email in the DB — no raw token is ever returned.
+ * Stale pending invites are flipped to `expired` first (Task 0002 policy) so
+ * they disappear from this active list.
+ */
+export async function listInvitationsForActor(
+  actor: Actor,
+): Promise<InvitationDetailDTO[]> {
+  await markExpiredInvitations();
+
+  const rows = await db
+    .select({
+      inv: invitations,
+      projectName: projects.name,
+      invitedByName: users.displayName,
+    })
+    .from(invitations)
+    .innerJoin(projects, eq(projects.id, invitations.projectId))
+    .leftJoin(users, eq(users.id, invitations.invitedBy))
+    .where(
+      and(eq(invitations.email, actor.email), eq(invitations.status, "pending")),
+    )
+    .orderBy(desc(invitations.createdAt));
+
+  return rows.map((r) => ({
+    invitation: toInvitationDTO(r.inv),
+    projectName: r.projectName,
+    invitedByName: r.invitedByName,
+    isExpired: r.inv.expiresAt.getTime() < Date.now(),
+  }));
+}
+
 /**
  * The invitee consumes a raw token from the emailed link.
  *  - `accept`  creates/activates an ACTIVE membership and marks the invite accepted.
@@ -278,76 +351,155 @@ export async function consumeInvitation(
       throw new ConflictError("This invitation was issued to a different account.");
     }
 
-    let membership: MemberDTO | null = null;
+    return applyInvitationDecision(tx, inv, actor, decision, invitee);
+  });
+}
 
-    if (decision === "accept") {
-      const existing = await findMembershipInTx(tx, inv.projectId, invitee.id);
-      if (existing) {
-        await tx
-          .update(projectMemberships)
-          .set({ status: "active", role: inv.role, updatedAt: new Date() })
-          .where(eq(projectMemberships.id, existing.id));
-      } else {
-        await tx.insert(projectMemberships).values({
-          id: crypto.randomUUID(),
-          projectId: inv.projectId,
-          userId: invitee.id,
-          role: inv.role,
-          status: "active",
-          invitedBy: inv.invitedBy,
-        });
-      }
+/**
+ * Shared accept/decline core, reused by token consumption and the invitee's
+ * pending-list response. Runs inside the caller's transaction so `Invitation`
+ * and `ProjectMembership` always agree (PRD §10): accept creates/activates an
+ * ACTIVE membership and marks the invite accepted; decline marks both the
+ * pending membership (if any) and the invitation declined. Records the
+ * corresponding activity event.
+ */
+async function applyInvitationDecision(
+  tx: DbTransaction,
+  inv: typeof invitations.$inferSelect,
+  actor: Actor,
+  decision: InvitationDecision,
+  invitee: { id: string; email: string; displayName: string | null },
+): Promise<{ invitation: InvitationDTO; membership: MemberDTO | null }> {
+  let membership: MemberDTO | null = null;
+
+  if (decision === "accept") {
+    const existing = await findMembershipInTx(tx, inv.projectId, invitee.id);
+    if (existing) {
       await tx
-        .update(invitations)
-        .set({ status: "accepted", updatedAt: new Date() })
-        .where(eq(invitations.id, inv.id));
-      await recordActivityInTx(tx, {
-        projectId: inv.projectId,
-        actorId: actor.id,
-        action: "member_accepted",
-        metadata: { email: inv.email, role: inv.role },
-      });
+        .update(projectMemberships)
+        .set({ status: "active", role: inv.role, updatedAt: new Date() })
+        .where(eq(projectMemberships.id, existing.id));
     } else {
-      const existing = await findMembershipInTx(tx, inv.projectId, invitee.id);
-      if (existing && existing.status === "pending") {
-        await tx
-          .update(projectMemberships)
-          .set({ status: "declined", updatedAt: new Date() })
-          .where(eq(projectMemberships.id, existing.id));
-      }
-      await tx
-        .update(invitations)
-        .set({ status: "declined", updatedAt: new Date() })
-        .where(eq(invitations.id, inv.id));
-      await recordActivityInTx(tx, {
+      await tx.insert(projectMemberships).values({
+        id: crypto.randomUUID(),
         projectId: inv.projectId,
-        actorId: actor.id,
-        action: "member_declined",
-        metadata: { email: inv.email },
+        userId: invitee.id,
+        role: inv.role,
+        status: "active",
+        invitedBy: inv.invitedBy,
       });
     }
+    await tx
+      .update(invitations)
+      .set({ status: "accepted", updatedAt: new Date() })
+      .where(eq(invitations.id, inv.id));
+    await recordActivityInTx(tx, {
+      projectId: inv.projectId,
+      actorId: actor.id,
+      action: "member_accepted",
+      metadata: { email: inv.email, role: inv.role },
+    });
+  } else {
+    const existing = await findMembershipInTx(tx, inv.projectId, invitee.id);
+    if (existing && existing.status === "pending") {
+      await tx
+        .update(projectMemberships)
+        .set({ status: "declined", updatedAt: new Date() })
+        .where(eq(projectMemberships.id, existing.id));
+    }
+    await tx
+      .update(invitations)
+      .set({ status: "declined", updatedAt: new Date() })
+      .where(eq(invitations.id, inv.id));
+    await recordActivityInTx(tx, {
+      projectId: inv.projectId,
+      actorId: actor.id,
+      action: "member_declined",
+      metadata: { email: inv.email },
+    });
+  }
 
-    const [finalInv] = await tx
+  const [finalInv] = await tx
+    .select()
+    .from(invitations)
+    .where(eq(invitations.id, inv.id))
+    .limit(1);
+
+  if (decision === "accept") {
+    const memberRow = await findMembershipInTx(tx, inv.projectId, invitee.id);
+    if (memberRow) {
+      membership = {
+        membershipId: memberRow.id,
+        userId: memberRow.userId,
+        name: invitee.displayName,
+        email: invitee.email,
+        role: memberRow.role,
+        status: memberRow.status,
+        joinedAt: memberRow.createdAt,
+      };
+    }
+  }
+
+  return { invitation: toInvitationDTO(finalInv), membership };
+}
+
+/**
+ * The invitee responds to a pending invitation by **id** (from their pending
+ * list, where no raw token is ever stored or exposed). Locates the invitation
+ * by id **and** the invitee's own email so one invitee can never act on
+ * another's row, then applies the same single-transaction accept/decline core.
+ */
+export async function respondToPendingInvitation(
+  actor: Actor,
+  invitationId: string,
+  decision: InvitationDecision,
+): Promise<{ invitation: InvitationDTO; membership: MemberDTO | null }> {
+  // Opportunistically expire stale invites before evaluation (Task 0002 policy).
+  await markExpiredInvitations();
+
+  return transaction(async (tx) => {
+    const [inv] = await tx
       .select()
       .from(invitations)
-      .where(eq(invitations.id, inv.id))
+      .where(
+        and(
+          eq(invitations.id, invitationId),
+          eq(invitations.email, actor.email),
+        ),
+      )
       .limit(1);
-
-    if (decision === "accept") {
-      const memberRow = await findMembershipInTx(tx, inv.projectId, invitee.id);
-      if (memberRow) {
-        membership = {
-          membershipId: memberRow.id,
-          userId: memberRow.userId,
-          name: invitee.displayName,
-          email: invitee.email,
-          role: memberRow.role,
-          status: memberRow.status,
-          joinedAt: memberRow.createdAt,
-        };
-      }
+    if (!inv) {
+      throw new NotFoundError(
+        "That invitation does not exist or was issued to a different account.",
+      );
+    }
+    if (inv.status === "accepted") {
+      throw new ConflictError("This invitation has already been accepted.");
+    }
+    if (inv.status === "revoked") {
+      throw new ConflictError("This invitation has been revoked.");
+    }
+    if (inv.status === "declined") {
+      throw new ConflictError("This invitation has already been declined.");
+    }
+    if (inv.status === "expired" || inv.expiresAt.getTime() < Date.now()) {
+      throw new ConflictError("This invitation has expired.");
     }
 
-    return { invitation: toInvitationDTO(finalInv), membership };
+    const [invitee] = await tx
+      .select()
+      .from(users)
+      .where(eq(users.email, inv.email))
+      .limit(1);
+    if (!invitee) {
+      throw new NotFoundError(
+        "No account matches this invitation yet. Sign up with the invited email first.",
+      );
+    }
+    if (invitee.id !== actor.id) {
+      throw new ConflictError("This invitation was issued to a different account.");
+    }
+
+    return applyInvitationDecision(tx, inv, actor, decision, invitee);
   });
 }

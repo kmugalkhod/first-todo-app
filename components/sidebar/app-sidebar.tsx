@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   CalendarClock,
@@ -9,6 +10,7 @@ import {
   Inbox,
   ListTodo,
   LogOut,
+  Mail,
   Plus,
   Users,
 } from "lucide-react";
@@ -175,6 +177,15 @@ export function AppSidebar({
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  render={<Link href="/invitations" />}
+                  className="h-[34px] gap-[9px] rounded-lg px-2.5 text-[0.74rem] font-[650] text-[#e1e3ff] hover:bg-white/10 hover:text-[#e1e3ff] data-[active=true]:bg-white/15"
+                >
+                  <Mail className="size-[15px]" strokeWidth={1.8} />
+                  <span>Invitations</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
