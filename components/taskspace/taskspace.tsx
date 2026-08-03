@@ -103,6 +103,20 @@ export function Taskspace({
     null,
   );
 
+  React.useEffect(() => {
+    const openComposer = () => {
+      const firstGroup = state.find((group) => group.sectionId !== null) ?? state[0];
+      if (!firstGroup) {
+        setCreatingSection(true);
+        return;
+      }
+      setComposingKey(firstGroup.key);
+      setDraft("");
+    };
+    window.addEventListener("taskspace:new-task", openComposer);
+    return () => window.removeEventListener("taskspace:new-task", openComposer);
+  }, [state]);
+
   // Re-sync whenever the server sends a fresh snapshot (after a create /
   // toggle triggers `router.refresh()`), without resetting the selection.
   // Kept as render-time state adjustment (the React-recommended pattern) so the

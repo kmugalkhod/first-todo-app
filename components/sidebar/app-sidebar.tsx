@@ -3,6 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import {
   CalendarClock,
   CheckCircle2,
@@ -125,6 +126,17 @@ export function AppSidebar({
   user: User;
   children: React.ReactNode;
 }) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  function captureTask() {
+    if (searchParams.get("project")) {
+      window.dispatchEvent(new Event("taskspace:new-task"));
+      return;
+    }
+    router.push("/?view=inbox");
+  }
+
   return (
     <Sidebar className="border-r border-white/10 md:inset-y-5 md:left-5 md:h-[calc(100svh-2.5rem)] md:rounded-l-[18px]" collapsible="offcanvas">
       <SidebarHeader className="px-4 pb-3 pt-5">
@@ -146,9 +158,7 @@ export function AppSidebar({
                 <SidebarMenuButton
                   data-nav="create"
                   className="h-11 gap-3 rounded-xl border border-white/25 bg-white/10 px-3 text-[0.75rem] font-[760] text-white hover:bg-white/20 hover:text-white data-[active=true]:border-white/25 data-[active=true]:bg-white/20 data-[active=true]:text-white"
-                  onClick={() =>
-                    window.dispatchEvent(new Event("todo:add-task"))
-                  }
+                  onClick={captureTask}
                 >
                   <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-[#edff81] text-[#202550]">
                     <Plus className="size-4" strokeWidth={2.75} />

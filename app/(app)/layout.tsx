@@ -1,13 +1,13 @@
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import type { CSSProperties } from "react";
-import { Plus, Search } from "lucide-react";
+import { Search } from "lucide-react";
 
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { listProjectsForActor, type ProjectDTO } from "@/lib/data-access";
 import { AppSidebar } from "@/components/sidebar/app-sidebar";
 import { ProjectHeader } from "@/components/projects/project-header";
 import { ProjectNav } from "@/components/sidebar/project-nav";
+import { TaskCaptureButton } from "@/components/taskspace/task-capture-button";
 import {
   SidebarInset,
   SidebarProvider,
@@ -73,10 +73,7 @@ export default async function ProtectedLayout({
             <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-2.5 size-3.5 text-muted-foreground" />
             <input id="workspace-search" name="q" type="search" placeholder="Search tasks and projects" className="h-[35px] w-full rounded-md border border-border bg-background py-0 pl-8 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--taskspace-coral)]" />
           </form>
-          <Link href="/?view=inbox" className="inline-flex h-[35px] shrink-0 items-center gap-1.5 rounded-md bg-primary px-3 text-xs font-bold text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--taskspace-coral)]">
-            <Plus className="size-4" />
-            <span className="hidden sm:inline">New task</span>
-          </Link>
+          <TaskCaptureButton />
         </header>
         <div className="flex-1">
           <ProjectHeader userId={user.id} />
