@@ -95,14 +95,22 @@ export default async function TaskspaceHome({
     );
   }
 
-  const [loadedProject, sections, tasks, labels, members, activity] = await Promise.all([
-    getProject(actor, projectId),
-    listSections(actor, projectId),
-    listTasksInProject(actor, projectId, { includeCompleted: true }),
-    listLabelsInProject(actor, projectId),
-    listMembers(actor, projectId),
-    listActivity(actor, projectId, { limit: 100 }),
-  ]);
+  // The shared workboard must not disappear because a secondary decoration
+  // (activity, labels, member avatar or a comment) fails to load. Keep the
+  // essential project/section/task read together, then degrade optional data
+  // locally so the user can still see and manage the actual work.
+  let loadedProject: Awaited<ReturnType<typeof getProject>>;
+  let sections: Awaited<ReturnType<typeof listSections>>;
+  let tasks: Awaited<ReturnType<typeof listTasksInProject>>;
+  try {
+    [loadedProject, sections, tasks] = await Promise.all([
+      getProject(actor, projectId),
+      listSections(actor, projectId),
+      listTasksInProject(actor, projectId, { includeCompleted: true }),
+    ]);
+  } catch {
+    return <main className="px-4 py-10 sm:px-9"><section className="max-w-xl border-y border-dashed border-border py-10"><h1 className="font-heading text-2xl tracking-[-0.04em] text-foreground">Your project couldn’t load.</h1><p className="mt-3 text-sm leading-6 text-muted-foreground">Refresh the page to retry. Your work has not been changed.</p></section></main>;
+  }
 
   // Non-members / archived content falls back to the "pick a project" prompt.
   if (!loadedProject || loadedProject.status === "archived") {
@@ -121,6 +129,11 @@ export default async function TaskspaceHome({
     );
   }
 
+  const [labels, members, activity] = await Promise.all([
+    listLabelsInProject(actor, projectId).catch(() => []),
+    listMembers(actor, projectId).catch(() => []),
+    listActivity(actor, projectId, { limit: 100 }).catch(() => []),
+  ]);
   const labelById = new Map(labels.map((label) => [label.id, label]));
   const activeMemberById = new Map(
     members
@@ -131,7 +144,10 @@ export default async function TaskspaceHome({
 
   const rows: TaskRowData[] = await Promise.all(
     tasks.map(async (task) => {
-      const [labelIds, comments] = await Promise.all([listTaskLabelIds(actor, task.id), listCommentsForTask(actor, task.id)]);
+      const [labelIds, comments] = await Promise.all([
+        listTaskLabelIds(actor, task.id).catch(() => []),
+        listCommentsForTask(actor, task.id).catch(() => []),
+      ]);
       const ownerRow = task.assigneeId
         ? activeMemberById.get(task.assigneeId)
         : undefined;
