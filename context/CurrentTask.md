@@ -15,6 +15,7 @@ This file is the single entry point the agent reads **first** to know what to wo
 5. When the task is complete, validate it, then update the `History` table (Section 4) and set `Status` to `Done`. Do **not** modify the content of the referenced task file.
 6. **Move the completed task file** from `context/Stories/Task/` into `context/Stories/Completed-Task/` (keep its filename unchanged). If the task was not fully completed, leave it in `Task/`.
 7. If blocked, leave `Status` = `Blocked` and add a note in `History`.
+8. **After a task is completed** (validated, `History` updated, task file moved), **create a well-named feature branch off `main`, commit all changes there, and push it to GitHub.** Use a descriptive branch name based on the task, e.g. `feat/0103-add-server-action-boundary`. Push the branch with `git push -u origin <branch>`. Do **not** push directly to `main`.
 
 ---
 
@@ -22,8 +23,8 @@ This file is the single entry point the agent reads **first** to know what to wo
 
 | Field | Value |
 |-------|-------|
-| **Task File Path** | `context/Stories/Task/0102-build-data-access-layer.md` |
-| **Task Title** | Build Data-Access Layer |
+| **Task File Path** | `context/Stories/Task/0103-add-server-action-boundary.md` |
+| **Task Title** | Add Server-Action Boundary |
 | **Status** | `Done` |
 | **Started** | 2026-08-03 |
 | **Completed** | 2026-08-03 |
@@ -53,6 +54,7 @@ Log every completed task here so the current state is visible at a glance. One r
 
 | Date | Task File | Title | Status | Notes |
 |------|-----------|-------|--------|-------|
+| 2026-08-03 | `context/Stories/Task/0103-add-server-action-boundary.md` | Add Server-Action Boundary | `Done` | Server-action boundary under `lib/server-actions/`. Client-safe shared result types in `types.ts` (`ActionResult<T> = { ok, data } | { ok: false, error: { code, message? } }`); every action returns a typed serialisable result and never throws opaque errors across the boundary. Thin actions over domains (`projects`, `memberships`, `sections`, `tasks`, `labels`, `comments`) each: resolve the actor from the session via `requireActor()` (never trusts client-sent userId/role), delegate to the Task 0102 DAO (which re-resolves the resource from the DB and re-checks membership/role), and normalise any `AppError` to a stable code (`UNAUTHORIZED`/`FORBIDDEN`/`NOT_FOUND`/`VALIDATION`/`CONFLICT`/`UNKNOWN`). `moveTask` maps to `updateTask`. The boundary keeps DB/auth code under server-only imports (`import "server-only"`); client code can only ever import the client-safe types. Typecheck + eslint clean. Invitations/`inviteMember` intentionally deferred to Story 02 (no DAO yet). |
 | 2026-08-03 | `context/Stories/Task/0102-build-data-access-layer.md` | Build Data-Access Layer | `Done` | Central data-access layer under `lib/data-access/`: every function takes the authenticated `Actor` first and enforces membership/role before touching data (PRD §7/§11). Role/permission matrix + reusable checks in `access.ts` (`assertPermission`, `assertProjectAccess`, `assertActiveMember`); typed DTOs strip sensitive fields (`users` never exposes `authProviderId`); DAO modules for `users`, `projects`, `memberships`, `sections`, `tasks`, `labels`, `comments`, `activity`. Multi-record writes atomic via new `dbWrite` (Neon WebSocket Pool) + `transaction.ts` (`createProject` + owner membership, `transferOwnership`, `setTaskLabels`). Reads return `null`/`empty` for non-members (no partial rows). Typecheck + eslint clean. Inbox/ project-less tasks deferred to Task 0400. |
 | 2026-08-03 | `context/Stories/Task/0101-create-database-schema-and-migrations.md` | Create Database Schema + Migrations | `Done` | Full PRD §10 data model in Drizzle/Postgres: `Project`, `ProjectMembership`, `Section`, `Task` (self-ref sub-tasks), `Label`/`TaskLabel`, `Comment` (soft delete), `ActivityEvent` (jsonb metadata), `Invitation` (`token_hash` only); added `users.avatar_url`. UTC `timestamptz` everywhere; unique natural keys + query indexes. Cross-table integrity (task section/parent same project, assignee must be active member, task-label project scope, completion check) enforced via triggers/check appended to `drizzle/0001_mixed_hedge_knight.sql`. Verified against dev Neon DB — migration applied and triggers exercised. |
 | 2026-08-03 | `context/Stories/Task/0100-setup-auth-and-user-sync.md` | Setup Auth + User Sync | `Done` | BetterAuth (magic-link + optional Google) with Drizzle/Postgres; `getCurrentUser()` syncs internal `User` via atomic upsert; protected `(app)` route group + `/sign-in`; Drizzle migration generated. Requires real `DATABASE_URL`/`BETTER_AUTH_SECRET`/`RESEND_API_KEY` before `pnpm dev` (see `.env.example`). |
