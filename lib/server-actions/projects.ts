@@ -3,6 +3,7 @@
 import {
   archiveProject,
   createProject,
+  listProjectsForActor,
   restoreProject,
   transferOwnership,
   updateProject,
@@ -25,6 +26,17 @@ import type { ActionResult } from "./types";
  * session — never from a client-supplied `userId` — and every write is
  * re-authorisation-checked inside the DAO before any data is touched.
  */
+
+/**
+ * List the actor's **active** projects (archived ones are hidden from active
+ * views, PRD FR-2). Returns only projects where the actor is an active member.
+ */
+export async function listProjectsAction(): Promise<ActionResult<ProjectDTO[]>> {
+  return toActionResult(async () => {
+    const actor = await requireActor();
+    return listProjectsForActor(actor);
+  });
+}
 
 /** Create a project; the caller becomes its owner (FR-2). */
 export async function createProjectAction(

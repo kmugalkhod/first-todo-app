@@ -115,8 +115,19 @@ export async function createProject(
   return toProjectDTO(loaded.project, loaded.role);
 }
 
-/** List projects the actor is an active member of, alphabetically. */
-export async function listProjectsForActor(actor: Actor): Promise<ProjectDTO[]> {
+/**
+ * List the projects the actor is an active member of, alphabetically.
+ *
+ * Defaults to **active** projects only — archived projects are excluded from
+ * active views (PRD FR-2 "archive must hide it from active views") but remain
+ * preserved for restoration. Pass `{ status: "archived" }` to enumerate the
+ * archived projects a member can restore.
+ */
+export async function listProjectsForActor(
+  actor: Actor,
+  opts?: { status?: ProjectStatus },
+): Promise<ProjectDTO[]> {
+  const status = opts?.status ?? "active";
   const rows = await db
     .select({
       project: projects,
@@ -128,6 +139,7 @@ export async function listProjectsForActor(actor: Actor): Promise<ProjectDTO[]> 
       and(
         eq(projectMemberships.userId, actor.id),
         eq(projectMemberships.status, "active"),
+        eq(projects.status, status),
       ),
     )
     .orderBy(asc(projects.name));
