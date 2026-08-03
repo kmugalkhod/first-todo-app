@@ -21,7 +21,7 @@ import {
   listProjectInvitationsAction,
   removeMemberAction,
 } from "@/lib/server-actions/memberships";
-import { transferOwnershipAction } from "@/lib/server-actions/projects";
+import { getProjectAction, transferOwnershipAction } from "@/lib/server-actions/projects";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -102,6 +102,7 @@ export function MembersDialog({
 
   const [members, setMembers] = React.useState<MemberDTO[]>([]);
   const [invitations, setInvitations] = React.useState<InvitationDTO[]>([]);
+  const [projectName, setProjectName] = React.useState<string>("");
   const [loading, setLoading] = React.useState(true);
   const [loadError, setLoadError] = React.useState<string | null>(null);
 
@@ -140,9 +141,11 @@ export function MembersDialog({
     Promise.all([
       listMembersAction(projectId),
       listProjectInvitationsAction(projectId),
-    ]).then(([mRes, iRes]) => {
+      getProjectAction(projectId),
+    ]).then(([mRes, iRes, pRes]) => {
       if (mRes.ok) setMembers(mRes.data);
       if (iRes.ok) setInvitations(iRes.data);
+      if (pRes.ok) setProjectName(pRes.data.name);
       setLoadError(
         !mRes.ok && !iRes.ok
           ? mRes.error.message ?? "Couldn't load members."
@@ -242,11 +245,16 @@ export function MembersDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Users className="size-4" />
-            Members
+            <span>
+              Members{projectName ? ` · ${projectName}` : ""}
+            </span>
           </DialogTitle>
           <DialogDescription>
-            People who can access this project. Pending invitations are shown
-            until they&apos;re accepted.
+            Managing access to{" "}
+            <span className="font-medium text-foreground">
+              {projectName || "this project"}
+            </span>
+            . Pending invitations are shown until they&apos;re accepted.
           </DialogDescription>
         </DialogHeader>
 
