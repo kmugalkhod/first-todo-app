@@ -59,12 +59,15 @@ export function ProjectNav({
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="mb-1 flex h-10 w-full items-center gap-3 rounded-lg px-2.5 text-[0.74rem] font-[700] text-[#e1e3ff] transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff765d] focus-visible:ring-offset-2 focus-visible:ring-offset-[#3543d6]"
+          className="mb-2 flex h-10 w-full items-center justify-between rounded-lg border border-white/25 bg-white/10 px-3 text-[0.75rem] font-[760] text-white transition-colors hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff765d] focus-visible:ring-offset-2 focus-visible:ring-offset-[#3543d6]"
         >
-          <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-[#edff81] text-[#202550]">
-            <Plus className="size-3.5" strokeWidth={2.75} />
-          </span>
           <span>New project</span>
+          <span
+            aria-hidden="true"
+            className="flex size-[19px] shrink-0 items-center justify-center rounded-full bg-[#edff81] text-[#202550]"
+          >
+            <Plus className="size-3" strokeWidth={3} />
+          </span>
         </button>
 
         {loading ? (
