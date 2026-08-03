@@ -83,10 +83,10 @@ function UserMenu({ user }: { user: User }) {
           </AvatarFallback>
         </Avatar>
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm font-semibold leading-5 text-white">
+          <span className="block truncate text-[0.72rem] font-semibold leading-4 text-white">
             {user.displayName || user.email.split("@")[0] || "You"}
           </span>
-          <span className="block truncate text-xs leading-4 text-white/55">
+          <span className="mt-0.5 block truncate text-[0.61rem] leading-3.5 text-[#c9cdfd]">
             {user.displayName ? user.email : "Your workspace"}
           </span>
         </span>
@@ -124,7 +124,7 @@ export function AppSidebar({ user }: { user: User }) {
           <span className="flex size-8 items-center justify-center rounded-xl bg-white font-bold text-[#202550] shadow-[0_8px_18px_-12px_rgba(10,10,40,0.9)]">
             T
           </span>
-          <span className="font-heading text-[0.95rem] font-semibold tracking-[-0.03em] text-white">
+          <span className="text-[0.95rem] font-extrabold tracking-[-0.04em] text-white">
             Taskspace
           </span>
         </div>
@@ -137,7 +137,7 @@ export function AppSidebar({ user }: { user: User }) {
               <SidebarMenuItem>
                 <SidebarMenuButton
                   data-nav="create"
-                  className="h-11 gap-3 rounded-xl border border-white/25 bg-white/10 px-3 text-[0.92rem] font-semibold text-white hover:bg-white/20 hover:text-white data-[active=true]:border-white/25 data-[active=true]:bg-white/20 data-[active=true]:text-white"
+                  className="h-11 gap-3 rounded-xl border border-white/25 bg-white/10 px-3 text-[0.75rem] font-[760] text-white hover:bg-white/20 hover:text-white data-[active=true]:border-white/25 data-[active=true]:bg-white/20 data-[active=true]:text-white"
                   onClick={() =>
                     window.dispatchEvent(new Event("todo:add-task"))
                   }
@@ -153,16 +153,18 @@ export function AppSidebar({ user }: { user: User }) {
         </SidebarGroup>
 
         <SidebarGroup className="pt-6">
-          <SidebarGroupLabel>Workspace</SidebarGroupLabel>
+          <SidebarGroupLabel className="px-2 text-[0.62rem] font-[750] uppercase tracking-[0.08em] text-[#c9cdfd]">
+            Your work
+          </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {workspaceItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
                     isActive={item.active}
-                    className="h-10 gap-3 rounded-lg px-3 text-[0.92rem] text-white/70 hover:bg-white/10 hover:text-white data-[active=true]:bg-white/15 data-[active=true]:font-semibold data-[active=true]:text-white"
+                    className="h-[34px] gap-[9px] rounded-lg px-2.5 text-[0.74rem] font-[650] text-[#e1e3ff] hover:bg-white/10 hover:text-[#e1e3ff] data-[active=true]:bg-white/15"
                   >
-                    <item.icon className="size-[18px]" strokeWidth={1.9} />
+                    <item.icon className="size-[15px]" strokeWidth={1.8} />
                     <span>{item.title}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -172,9 +174,11 @@ export function AppSidebar({ user }: { user: User }) {
         </SidebarGroup>
 
         <SidebarGroup className="pb-4 pt-6">
-          <SidebarGroupLabel>Projects</SidebarGroupLabel>
+          <SidebarGroupLabel className="px-2 text-[0.62rem] font-[750] uppercase tracking-[0.08em] text-[#c9cdfd]">
+            Projects
+          </SidebarGroupLabel>
           <SidebarGroupContent>
-            <p className="px-3 pt-1 text-xs leading-5 text-white/50">
+            <p className="px-3 pt-1 text-xs leading-5 text-[#c9cdfd]/75">
               Create a project to bring teammates together.
             </p>
           </SidebarGroupContent>
@@ -183,11 +187,11 @@ export function AppSidebar({ user }: { user: User }) {
 
       <SidebarFooter className="px-3 pb-4">
         <div className="px-2 pb-3">
-          <p className="flex items-center gap-1.5 text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-white/45">
+          <p className="flex items-center gap-1.5 text-[0.62rem] font-[750] uppercase tracking-[0.08em] text-[#c9cdfd]">
             <Users className="size-3.5" />
             People
           </p>
-          <p className="pl-3.5 pt-1 text-xs leading-5 text-white/50">
+          <p className="pl-3.5 pt-1 text-xs leading-5 text-[#c9cdfd]/75">
             No collaborators yet.
           </p>
         </div>

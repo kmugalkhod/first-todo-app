@@ -107,8 +107,9 @@
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
-  /* Taskspace cobalt navigation field (DESIGN.md palette). */
-  --sidebar: #252d95;
+  /* Taskspace cobalt navigation field (DESIGN.md palette). Kept at the
+     reference cobalt in dark mode too so the sidebar matches the prototype. */
+  --sidebar: #3543d6;
   --sidebar-foreground: #ffffff;
   --sidebar-primary: #edff81;
   --sidebar-primary-foreground: #202550;
