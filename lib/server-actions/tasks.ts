@@ -5,6 +5,7 @@ import {
   completeTask,
   createTask,
   deleteTask,
+  moveTaskToProject,
   reopenTask,
   setTaskLabels,
   updateTask,
@@ -56,6 +57,21 @@ export async function moveTaskAction(
   input: { sectionId?: string | null; position?: number },
 ): Promise<ActionResult<TaskDTO>> {
   return updateTaskAction(taskId, input);
+}
+
+/**
+ * Move a task to another project — or to the Inbox (`destinationProjectId =
+ * null`). The actor's role in the destination project is enforced server-side
+ * (FR-3). Project-scoped section/parent/assignee fields are re-scoped/cleared.
+ */
+export async function moveTaskToProjectAction(
+  taskId: string,
+  destinationProjectId: string | null,
+): Promise<ActionResult<TaskDTO>> {
+  return toActionResult(async () => {
+    const actor = await requireActor();
+    return moveTaskToProject(actor, taskId, destinationProjectId);
+  });
 }
 
 /** Complete a task, recording who and when. */
