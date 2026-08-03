@@ -9,13 +9,14 @@ This file is the single entry point the agent reads **first** to know what to wo
 ## 1. Instructions for the LLM
 
 1. Read **this** file first.
-2. Read the required context files (Section 3) **before** writing/editing any code — especially any UI work.
-3. Read the task file given in `/Users/kunal007/projects/first-todo-app/context/Stories/Task/0203-invitation-emails-and-acceptance.md` (Section 2) and implement it fully against its *Requirement*, *Steps* and *Recommendation*.
-4. Follow `AGENTS.md` (mode rules, design conformance, story/task discipline).
-5. When the task is complete, validate it, then update the `History` table (Section 4) and set `Status` to `Done`. Do **not** modify the content of the referenced task file.
-6. **Move the completed task file** from `context/Stories/Task/` into `context/Stories/Completed-Task/` (keep its filename unchanged). If the task was not fully completed, leave it in `Task/`.
-7. If blocked, leave `Status` = `Blocked` and add a note in `History`.
-8. **After a task is completed** (validated, `History` updated, task file moved), **create a well-named feature branch off `main`, commit all changes there, and push it to GitHub.** Use a descriptive branch name based on the task, e.g. `feat/0103-add-server-action-boundary`. Push the branch with `git push -u origin <branch>`. Do **not** push directly to `main`.
+2. Read `AGENTS.md` **including its Codebase Map section** (Section 3) — this describes the current directory structure, layering/data-flow, data model, permission model and conventions so you do **not** need to explore the entire codebase to understand it. Only open a specific file when you need its exact details.
+3. Read the required context files (Section 3) **before** writing/editing any code — especially any UI work.
+4. Read the task file given in `/Users/kunal007/projects/first-todo-app/context/Stories/Task/0204-role-permission-matrix-and-enforcement.md` (Section 2) and implement it fully against its *Requirement*, *Steps* and *Recommendation*.
+5. Follow `AGENTS.md` (mode rules, design conformance, story/task discipline).
+6. When the task is complete, validate it, then update the `History` table (Section 4) and set `Status` to `Done`. Do **not** modify the content of the referenced task file.
+7. **Move the completed task file** from `context/Stories/Task/` into `context/Stories/Completed-Task/` (keep its filename unchanged). If the task was not fully completed, leave it in `Task/`.
+8. If blocked, leave `Status` = `Blocked` and add a note in `History`.
+9. **After a task is completed** (validated, `History` updated, task file moved), **create a well-named feature branch off `main`, commit all changes there, and push it to GitHub.** Use a descriptive branch name based on the task, e.g. `feat/0103-add-server-action-boundary`. Push the branch with `git push -u origin <branch>`. Do **not** push directly to `main`.
 
 ---
 
@@ -23,8 +24,8 @@ This file is the single entry point the agent reads **first** to know what to wo
 
 | Field | Value |
 |-------|-------|
-| **Task File Path** | `context/Stories/Task/0203-invitation-emails-and-acceptance.md` |
-| **Task Title** | Invitation Emails + Acceptance |
+| **Task File Path** | `context/Stories/Task/0204-role-permission-matrix-and-enforcement.md` |
+| **Task Title** | Role Permission Matrix + Enforcement |
 | **Status** | `Done` |
 | **Started** | 2026-08-03 |
 | **Completed** | 2026-08-03 |
@@ -37,7 +38,7 @@ This file is the single entry point the agent reads **first** to know what to wo
 
 | Purpose | Path |
 |---------|------|
-| **Agent rules / project conventions** | `AGENTS.md` |
+| **Agent rules / project conventions + Codebase Map** | `AGENTS.md` (its Codebase Map section documents the repo structure, layering/data-flow, data model, permission model and conventions — read it so you do **not** need to explore the whole codebase) |
 | **Design system (canonical)** | `DESIGN.md` |
 | **Design — golden reference** | `context/Final-design/taskspace-momentum-prototype.html` |
 | **Design — machine-readable tokens** | `.impeccable/design.json` |
@@ -54,6 +55,7 @@ Log every completed task here so the current state is visible at a glance. One r
 
 | Date | Task File | Title | Status | Notes |
 |------|-----------|-------|--------|-------|
+| 2026-08-03 | `context/Stories/Task/0204-role-permission-matrix-and-enforcement.md` | Role Permission Matrix + Enforcement | `Done` | PRD §7 matrix enforced server-side on every read + mutation (Task 0204). Declarative single-source role→permission map extracted into a **pure, testable** `lib/permissions.ts` (`PERMISSIONS`, `ROLE_LEVEL`, `roleCan`, `permissionsForRole`) — no `server-only`/DB imports, imported by the DAO guard and usable to drive UI affordances (defence in depth). `lib/data-access/access.ts` now re-exports the matrix and adds the non-throwing shared guard `can(actor, projectId, permission)`; every DAO path keeps using `assertPermission`/`assertProjectAccess` (View/Editor, Editor+, Owner-only actions), and membership is re-queried per request so a removed/non-active member loses access immediately including existing sessions. Assignment is gated by `assertActiveMember` (references an active member, never grants membership). First vitest suite added (vitest devDep + `vitest.config.ts` + `test`/`test:watch` scripts); `lib/permissions.test.ts` covers every matrix cell (35 tests) incl. self-consistency/monotonicity. Typecheck + tests + eslint (my files) clean. | 
 | 2026-08-03 | `context/Stories/Task/0203-invitation-emails-and-acceptance.md` | Invitation Emails + Acceptance | `Done` | Completion of the 0202 invitation loop (Task 0203). `inviteMemberAction` now sends the invitation email (`lib/email/invitation.ts`, Resend, mirrors magic-link dev fallback) with a single-use `/invite/<token>` accept link bounded by `APP_ORIGIN`. New top-level `app/invite/[token]/page.tsx` accepts/declines after auth — server-hashed token lookup via `getInvitationDetailByToken` (project + inviter names, `isExpired`), guards replay/expiry/email-mismatch in the UI, and routes signed-out invitees through `/sign-in?next=` (sign-in now honours a sanitised `next` callback via `callbackURL`/`newUserCallbackURL`). DAO refactor extracts shared `applyInvitationDecision` (one transaction: activation/decline + `member_accepted`/`member_declined` activity) reused by both `consumeInvitation` and new `respondToPendingInvitation(actor, invitationId, decision)`; new `listInvitationsForActor` backs the invitee-facing `/invitations` surface (expiry flipped lazily, no raw token returned) with a sidebar "Invitations" link. New `lib/server-actions/invitations.ts` exposes `respondToTokenAction` + `respondToPendingInvitationAction`; shared `InvitationDecisionButtons` component drives both surfaces. Typecheck + my-file eslint clean; `next build` passes (routes `/invitations` + `/invite/[token]` registered). |
 | 2026-08-03 | `context/Stories/Task/0202-membership-and-invitation-data-model.md` | Membership + Invitation Data Model | `Done` | Membership + invitation data model per PRD FR-2/§7/§10. `memberships.ts` gains the pending-invitation lifecycle — `addPendingMembership` (owner-only, one row per project/user, re-opens declined/removed rows as pending), `activateMembership`/`declineMembership` (invitee or owner). New `invitations.ts` DAO: `createInvitation` generates a 32-byte single-use token, stores only its SHA-256 hash, expires after 7 days, creates a linked `pending` membership in the same transaction when the email maps to an account, records `member_invited`, and returns the raw token exactly once for the emailed link; `findInvitationByToken`/`findByTokenHash` resolve links without any raw-token leak; `markExpiredInvitations` expires stale pending invites; `consumeInvitation(token, actor, accept\|decline)` runs in one transaction so `Invitation` and `ProjectMembership` always agree (accept creates an active membership + records `member_accepted`; decline marks invitation + pending membership declined). Roles restricted to Editor/Viewer — an invite can never grant Owner. Exposed via `lib/data-access/index.ts` and a new `inviteMemberAction` server action (owner-gated) that returns the token for 0203. Typecheck + lint clean; `next build` passes. | 
 | 2026-08-03 | `context/Stories/Task/0201-project-list-and-creation-ui.md` | Project List + Creation UI | `Done` | Sidebar "Projects" section listing the actor's active projects (Task 0201 / FR-2) with citron diamond markers, a project-count label, active-state highlight from the `?project=<id>` query param, plus an empty state, load-error state and a Suspense skeleton. Server-fetched in `app/(app)/layout.tsx` via `listProjectsForActor` and passed into the shared `ProjectNav` client component (wrapped in Suspense) so the list stays consistent app-wide. New `CreateProjectDialog` captures a required name, optional description and the owner's default invite role (Editor, matching the prototype; invitation sending ships with 0202/0203), calls `createProjectAction`, then navigates to the new project and `router.refresh()`s so it appears immediately. Keyboard-accessible "New project" affordance with the lime plus mark per DESIGN.md. `AppSidebar` now accepts the server-rendered projects nav as children. Typecheck + lint clean; `next build` passes. | 
