@@ -40,5 +40,6 @@ Before writing or editing ANY styles, components, or markup, read BOTH of these 
 
 - Product decisions live in `DECISIONS.md` (do not re-litigate them).
 - Work is driven by `context/Stories/` — read the current Story file, then its `Task/*.md` files, and implement in numeric order. A task is done only when its Requirement, Steps, Recommendation and acceptance criteria are satisfied.
+- When a task is fully completed, move its `.md` file from `context/Stories/Task/` into `context/Stories/Completed-Task/` (keep the filename) and record it in `context/CurrentTask.md`'s History. Leave unfinished tasks in `Task/`.
 - Every Story builds from the same design north star summarized in `context/Stories/README.md`.
 <!-- END:stories-context -->

@@ -2,7 +2,7 @@
 
 This file is the single entry point the agent reads **first** to know what to work on. It tells the LLM the exact task to execute, which project files to honour, and where to record the result when the task is done.
 
-> **Workflow:** The human (or a parent agent) writes a task file path into `Task File Path` below → the LLM reads this file, reads the task, implements it → on completion the LLM marks `Status` as done and appends a row to `History`. The task file itself is never edited here.
+> **Workflow:** The human (or a parent agent) writes a task file path into `Task File Path` below → the LLM reads this file, reads the task, implements it → on completion the LLM marks `Status` as done, appends a row to `History`, and **moves that task's `.md` file** out of `context/Stories/Task/` into `context/Stories/Completed-Task/`. The task file content itself is never edited here.
 
 ---
 
@@ -12,8 +12,9 @@ This file is the single entry point the agent reads **first** to know what to wo
 2. Read the required context files (Section 3) **before** writing/editing any code — especially any UI work.
 3. Read the task file given in `Task File Path` (Section 2) and implement it fully against its *Requirement*, *Steps* and *Recommendation*.
 4. Follow `AGENTS.md` (mode rules, design conformance, story/task discipline).
-5. When the task is complete, validate it, then update the `History` table (Section 4) and set `Status` to `Done`. Do **not** modify the referenced task file.
-6. If blocked, leave `Status` = `Blocked` and add a note in `History`.
+5. When the task is complete, validate it, then update the `History` table (Section 4) and set `Status` to `Done`. Do **not** modify the content of the referenced task file.
+6. **Move the completed task file** from `context/Stories/Task/` into `context/Stories/Completed-Task/` (keep its filename unchanged). If the task was not fully completed, leave it in `Task/`.
+7. If blocked, leave `Status` = `Blocked` and add a note in `History`.
 
 ---
 
