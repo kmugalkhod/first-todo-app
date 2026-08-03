@@ -22,8 +22,8 @@ This file is the single entry point the agent reads **first** to know what to wo
 
 | Field | Value |
 |-------|-------|
-| **Task File Path** | `/Users/kunal007/projects/first-todo-app/context/Stories/Task/0101-create-database-schema-and-migrations.md` |
-| **Task Title** | Create Database Schema + Migrations |
+| **Task File Path** | `context/Stories/Task/0102-build-data-access-layer.md` |
+| **Task Title** | Build Data-Access Layer |
 | **Status** | `Done` |
 | **Started** | 2026-08-03 |
 | **Completed** | 2026-08-03 |
@@ -53,6 +53,7 @@ Log every completed task here so the current state is visible at a glance. One r
 
 | Date | Task File | Title | Status | Notes |
 |------|-----------|-------|--------|-------|
+| 2026-08-03 | `context/Stories/Task/0102-build-data-access-layer.md` | Build Data-Access Layer | `Done` | Central data-access layer under `lib/data-access/`: every function takes the authenticated `Actor` first and enforces membership/role before touching data (PRD §7/§11). Role/permission matrix + reusable checks in `access.ts` (`assertPermission`, `assertProjectAccess`, `assertActiveMember`); typed DTOs strip sensitive fields (`users` never exposes `authProviderId`); DAO modules for `users`, `projects`, `memberships`, `sections`, `tasks`, `labels`, `comments`, `activity`. Multi-record writes atomic via new `dbWrite` (Neon WebSocket Pool) + `transaction.ts` (`createProject` + owner membership, `transferOwnership`, `setTaskLabels`). Reads return `null`/`empty` for non-members (no partial rows). Typecheck + eslint clean. Inbox/ project-less tasks deferred to Task 0400. |
 | 2026-08-03 | `context/Stories/Task/0101-create-database-schema-and-migrations.md` | Create Database Schema + Migrations | `Done` | Full PRD §10 data model in Drizzle/Postgres: `Project`, `ProjectMembership`, `Section`, `Task` (self-ref sub-tasks), `Label`/`TaskLabel`, `Comment` (soft delete), `ActivityEvent` (jsonb metadata), `Invitation` (`token_hash` only); added `users.avatar_url`. UTC `timestamptz` everywhere; unique natural keys + query indexes. Cross-table integrity (task section/parent same project, assignee must be active member, task-label project scope, completion check) enforced via triggers/check appended to `drizzle/0001_mixed_hedge_knight.sql`. Verified against dev Neon DB — migration applied and triggers exercised. |
 | 2026-08-03 | `context/Stories/Task/0100-setup-auth-and-user-sync.md` | Setup Auth + User Sync | `Done` | BetterAuth (magic-link + optional Google) with Drizzle/Postgres; `getCurrentUser()` syncs internal `User` via atomic upsert; protected `(app)` route group + `/sign-in`; Drizzle migration generated. Requires real `DATABASE_URL`/`BETTER_AUTH_SECRET`/`RESEND_API_KEY` before `pnpm dev` (see `.env.example`). |
 
