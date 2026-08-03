@@ -4,6 +4,8 @@ import {
   changeMemberRole,
   createInvitation,
   getProject,
+  listMembers,
+  listProjectInvitations,
   removeMember,
 } from "@/lib/data-access";
 import type { InvitationDTO, MemberDTO } from "@/lib/data-access";
@@ -21,6 +23,33 @@ import type { ActionResult } from "./types";
  * supplied here is only the **target** of the operation and never grants the
  * actor any authority.
  */
+
+/**
+ * List a project's active member roster (`project:view` — any active member
+ * can see the roster; non-members get nothing). Server is the source of truth;
+ * the UI re-fetches after every mutation.
+ */
+export async function listMembersAction(
+  projectId: string,
+): Promise<ActionResult<MemberDTO[]>> {
+  return toActionResult(async () => {
+    const actor = await requireActor();
+    return listMembers(actor, projectId);
+  });
+}
+
+/**
+ * List a project's pending invitations (owner only). Lets an owner keep
+ * pending vs active members distinguishable in the Members surface (FR-2).
+ */
+export async function listProjectInvitationsAction(
+  projectId: string,
+): Promise<ActionResult<InvitationDTO[]>> {
+  return toActionResult(async () => {
+    const actor = await requireActor();
+    return listProjectInvitations(actor, projectId);
+  });
+}
 
 /** Change a member's role to Editor or Viewer (owner only). */
 export async function changeMemberRoleAction(
