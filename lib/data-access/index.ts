@@ -15,6 +15,7 @@ export * from "./transaction";
 export * from "./users";
 export * from "./projects";
 export * from "./memberships";
+export * from "./invitations";
 export * from "./sections";
 export * from "./tasks";
 export * from "./labels";
