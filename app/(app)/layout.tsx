@@ -1,7 +1,13 @@
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 
 import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { listProjectsForActor, type ProjectDTO } from "@/lib/data-access";
 import { AppSidebar } from "@/components/sidebar/app-sidebar";
+import {
+  ProjectNav,
+  ProjectNavSkeleton,
+} from "@/components/sidebar/project-nav";
 import { ModeToggle } from "@/feature/components/toggle";
 import {
   SidebarInset,
@@ -15,7 +21,30 @@ import {
  * and renders inside the shared Taskspace application shell — the cobalt
  * sidebar, action topbar and paper workspace persist across all protected
  * pages so navigation never tears down the frame.
+ *
+ * The sidebar's project list is fetched server-side here (`listProjectsForActor`)
+ * and passed into the shared ProjectNav so it stays consistent app-wide. It is
+ * wrapped in Suspense so the shared layout can stream while the query runs.
  */
+async function ProjectsProvider({
+  userId,
+  email,
+}: {
+  userId: string;
+  email: string;
+}) {
+  let projects: ProjectDTO[] | null = null;
+  let error: string | null = null;
+
+  try {
+    projects = await listProjectsForActor({ id: userId, email });
+  } catch {
+    error = "Couldn't load your projects. Please try again.";
+  }
+
+  return <ProjectNav projects={projects} error={error} />;
+}
+
 export default async function ProtectedLayout({
   children,
 }: {
@@ -31,7 +60,11 @@ export default async function ProtectedLayout({
 
   return (
     <SidebarProvider>
-      <AppSidebar user={user} />
+      <AppSidebar user={user}>
+        <Suspense fallback={<ProjectNavSkeleton />}>
+          <ProjectsProvider userId={user.id} email={user.email} />
+        </Suspense>
+      </AppSidebar>
       <SidebarInset className="min-h-svh bg-background">
         <header className="flex h-16 shrink-0 items-center justify-between border-b border-border/80 bg-background/95 px-4 sm:px-6">
           <div className="flex items-center gap-3">
