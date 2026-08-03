@@ -266,6 +266,33 @@ export async function getInvitationDetailByToken(
 }
 
 /**
+ * List a project's **pending** invitations (owner only, `member:role`). Lets
+ * an owner see who has been invited but not yet responded, keeping pending vs
+ * active members distinguishable (FR-2). Scoped so non-owners see nothing
+ * (privacy NFR).
+ */
+export async function listProjectInvitations(
+  actor: Actor,
+  projectId: string,
+): Promise<InvitationDTO[]> {
+  await assertPermission(actor, projectId, "member:role");
+  await markExpiredInvitations();
+
+  const rows = await db
+    .select()
+    .from(invitations)
+    .where(
+      and(
+        eq(invitations.projectId, projectId),
+        eq(invitations.status, "pending"),
+      ),
+    )
+    .orderBy(desc(invitations.createdAt));
+
+  return rows.map(toInvitationDTO);
+}
+
+/**
  * List the actor's pending invitations (invitee-facing surface, Task 0203).
  * Scoped to the actor's own email in the DB — no raw token is ever returned.
  * Stale pending invites are flipped to `expired` first (Task 0002 policy) so

@@ -12,11 +12,11 @@ import {
   LogOut,
   Mail,
   Plus,
-  Users,
 } from "lucide-react";
 
 import { authClient } from "@/lib/auth/client";
 import type { User } from "@/lib/db/schema";
+import { MembersSection } from "@/components/members/members-section";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -194,15 +194,7 @@ export function AppSidebar({
       </SidebarContent>
 
       <SidebarFooter className="px-3 pb-4">
-        <div className="px-2 pb-3">
-          <p className="flex items-center gap-1.5 text-[0.62rem] font-[750] uppercase tracking-[0.08em] text-[#c9cdfd]">
-            <Users className="size-3.5" />
-            People
-          </p>
-          <p className="pl-3.5 pt-1 text-xs leading-5 text-[#c9cdfd]/75">
-            No collaborators yet.
-          </p>
-        </div>
+        <MembersSection meUserId={user.id} />
         <div className="rounded-2xl border border-white/10 bg-white/[0.06] p-1.5">
           <UserMenu user={user} />
         </div>

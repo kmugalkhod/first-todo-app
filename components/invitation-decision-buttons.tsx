@@ -18,6 +18,11 @@ import {
  *
  * Both call the same single-use, expiry-guarded server action family. Exactly
  * one of `token` / `invitationId` must be provided.
+ *
+ * Styled to Taskspace's Primary Action spec (`.impeccable/design.json`):
+ * Accept is the cobalt advancement control; Decline is the quiet outline
+ * counterpart. The pair stays compact beside the invite row and stacks on
+ * small screens.
  */
 export function InvitationDecisionButtons({
   token,
@@ -57,14 +62,14 @@ export function InvitationDecisionButtons({
   }
 
   return (
-    <div className="flex flex-col gap-2 sm:flex-row">
+    <div className="inline-flex shrink-0 flex-col gap-2 sm:flex-row">
       <Button
         type="button"
         disabled={busy !== null}
         onClick={() => decide("accept")}
-        className="h-11 flex-1 rounded-xl"
+        className="h-10 rounded-[7px] bg-[#3543d6] px-3.5 text-[0.72rem] font-[760] text-white transition-colors hover:bg-[#252d95] sm:h-[35px]"
       >
-        <Check className="size-4" />
+        <Check className="size-3.5" />
         {busy === "accept" ? "Joining…" : "Accept invitation"}
       </Button>
       <Button
@@ -72,9 +77,9 @@ export function InvitationDecisionButtons({
         variant="outline"
         disabled={busy !== null}
         onClick={() => decide("decline")}
-        className="h-11 flex-1 rounded-xl"
+        className="h-10 rounded-[7px] border border-[#d9ddea] bg-white px-3.5 text-[0.72rem] font-[760] text-[#66708c] transition-colors hover:bg-[#f7f8ff] sm:h-[35px]"
       >
-        <X className="size-4" />
+        <X className="size-3.5" />
         {busy === "decline" ? "Declining…" : "Decline"}
       </Button>
     </div>

@@ -3,6 +3,7 @@
 import {
   archiveProject,
   createProject,
+  getProject,
   listProjectsForActor,
   restoreProject,
   transferOwnership,
@@ -45,6 +46,22 @@ export async function createProjectAction(
   return toActionResult(async () => {
     const actor = await requireActor();
     return createProject(actor, input);
+  });
+}
+
+/**
+ * Fetch a single project by id (any active member can read it). Used by the
+ * Members surface to display *which* project is being managed, making the
+ * project scoping explicit rather than implicit.
+ */
+export async function getProjectAction(
+  projectId: string,
+): Promise<ActionResult<ProjectDTO>> {
+  return toActionResult(async () => {
+    const actor = await requireActor();
+    const project = await getProject(actor, projectId);
+    if (!project) throw new Error("Project not found.");
+    return project;
   });
 }
 
