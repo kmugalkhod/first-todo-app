@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Taskspace — Pulse Queue prototype</title>
+    <style>
+      :root { color-scheme: light; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; --ink:#302335; --plum:#35243b; --plum-2:#4f3b55; --paper:#fffdfb; --canvas:#f5f1ef; --line:#e7dedc; --muted:#897a84; --lime:#d7f36c; --coral:#f49775; --pink:#ce4c72; }
+      * { box-sizing: border-box; }
+      body { min-width: 320px; margin: 0; background: var(--canvas); color: var(--ink); }
+      button, input, select { font: inherit; } button { cursor: pointer; } button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid #c14770; outline-offset: 3px; }
+      .shell { width: min(1440px, calc(100% - 40px)); min-height: calc(100vh - 48px); margin: 24px auto; overflow: hidden; border-radius: 16px; background: var(--paper); box-shadow: 0 28px 70px -48px rgba(26, 20, 30, .62); }
+      .topbar { min-height: 66px; display:flex; align-items:center; gap: 32px; padding: 0 26px; border-bottom: 1px solid var(--line); background: rgba(255,253,251,.98); }
+      .brand { display:flex; align-items:center; gap: 10px; color: var(--plum); font-weight: 780; letter-spacing: -.035em; white-space: nowrap; }
+      .brand-mark { width: 17px; height: 17px; border-radius: 5px; background: var(--pink); transform: rotate(45deg); }
+      .topnav { display:flex; align-items:center; gap: 4px; min-width: 0; }
+      .topnav button { padding: 9px 11px; border: 0; border-radius: 7px; background: transparent; color: #877882; font-size: .78rem; font-weight: 680; white-space: nowrap; }
+      .topnav button:hover, .topnav button.active { color: var(--plum); background: #f6eaef; }
+      .toolbar { display:flex; align-items:center; gap: 10px; margin-left: auto; }
+      .search { width: 190px; height: 35px; padding: 0 11px; border: 1px solid #e4dddf; border-radius: 7px; background: #fff; color: var(--ink); font-size: .73rem; }
+      .search::placeholder { color: #aa9da4; }
+      .new-task { height: 36px; padding: 0 12px; border: 0; border-radius: 7px; background: var(--plum); color: #fff; font-size: .73rem; font-weight: 740; white-space: nowrap; }
+      .new-task:hover { background: #51385a; }
+      .workspace { min-height: calc(100vh - 114px); display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(300px, .7fr); }
+      .board { padding: 38px 46px 42px; background: var(--paper); }
+      .board-header { display:flex; align-items:end; justify-content:space-between; gap: 24px; }
+      .board-title { margin: 0; font-size: clamp(2.1rem, 4.4vw, 3.75rem); font-weight: 780; line-height: .92; letter-spacing: -.06em; }
+      .board-subtitle { max-width: 570px; margin: 10px 0 0; color: var(--muted); font-size: .88rem; line-height: 1.55; }
+      .count { padding: 6px 8px; border-radius: 99px; background: #f6e1e9; color: #9e3d61; font-size: .69rem; font-weight: 740; white-space: nowrap; }
+      .composer { display:none; grid-template-columns: minmax(0, 1fr) 120px 120px auto; gap: 8px; margin-top: 26px; padding: 12px; border-radius: 11px; background: #f8eef1; }
+      .composer.open { display:grid; }
+      .composer input, .composer select { min-width: 0; height: 37px; padding: 0 10px; border: 1px solid #e3d5db; border-radius: 6px; background: #fff; color: var(--ink); font-size: .74rem; }
+      .composer button { height: 37px; padding: 0 12px; border: 0; border-radius: 6px; background: var(--pink); color: #fff; font-size: .72rem; font-weight: 740; }
+      .queue { margin-top: 32px; border-top: 1px solid var(--line); }
+      .queue-row { position: relative; display:grid; grid-template-columns: 89px minmax(0, 1fr) auto; gap: 16px; align-items:center; min-height: 82px; border-bottom: 1px solid #eee7e5; transition: background .16s ease, transform .16s ease; }
+      .queue-row:hover { background: #fff8f7; }.queue-row[data-selected="true"] { background: #f7e6ec; }
+      .queue-row.now { margin: 0 -16px; padding: 0 16px; border-bottom: 0; background: var(--plum); color: #fff; }.queue-row.now:hover { background: #4b3453; transform: translateX(3px); }.queue-row.now[data-selected="true"] { background: #50385a; }
+      .row-position { color: #917e89; font-size: .64rem; font-weight: 760; letter-spacing: .055em; }.now .row-position { color: #d9c5d6; }
+      .task-main { display:flex; align-items:center; gap: 11px; min-width: 0; }.task-copy { min-width:0; }.task-title { margin:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size: .9rem; font-weight: 710; letter-spacing: -.017em; }.task-meta { display:flex; gap:7px; align-items:center; margin-top:4px; color:#988891; font-size:.67rem; }.now .task-meta { color:#d6c2d2; }
+      .complete { flex:0 0 auto; width:20px; height:20px; border:2px solid #ac9aa4; border-radius:50%; background:transparent; }.now .complete { border-color:#f4dfef; }.complete:hover { border-color:var(--pink); }.complete.done { position:relative; border-color:var(--lime); background:var(--lime); }.complete.done::after { content:""; position:absolute; width:8px; height:4px; top:5px; left:4px; border-bottom:2px solid #324000; border-left:2px solid #324000; transform:rotate(-45deg); }
+      .due { padding:4px 6px; border-radius:5px; background:#f7e0a2; color:#755010; font-size:.62rem; font-weight:740; white-space:nowrap; }.now .due { background:var(--lime); color:#314100; }.due.tomorrow { background:#e9e2ef; color:#665477; }.due.later { background:#edf0f1; color:#637179; }.due.done { background:#e4efe5; color:#3c6a4a; }
+      .empty { padding: 42px 0; color: var(--muted); font-size: .86rem; line-height: 1.6; }.empty strong { display:block; margin-bottom: 5px; color:var(--ink); font-size:1rem; }
+      .view-list { margin-top: 30px; border-top: 1px solid var(--line); }.view-list .queue-row { grid-template-columns:minmax(0, 1fr) auto; }.view-list .task-main { padding-right: 14px; }.view-list .task-title { white-space: normal; }.view-list .queue-row.now { margin:0; padding:0; background:transparent; color:inherit; border-bottom:1px solid #eee7e5; }.view-list .queue-row.now .row-position { color:#917e89; }.view-list .queue-row.now .task-meta { color:#988891; }.view-list .queue-row.now .complete { border-color:#ac9aa4; }.view-list .queue-row.now .due { background:#f7e0a2; color:#755010; }.view-list .queue-row.now:hover { background:#fff8f7; transform:none; }
+      .inbox-note { display:flex; align-items:center; gap:10px; margin-top:28px; padding:13px; border-radius:9px; background:#f6eef0; color:#745a66; font-size:.75rem; line-height:1.45; }.inbox-note span { width:20px; height:20px; flex:0 0 auto; display:grid; place-items:center; border-radius:50%; background:#fff; color:#b64469; font-weight:800; }
+      .side { display:flex; flex-direction:column; min-width:0; padding:32px 31px; background:var(--plum); color:white; }
+      .side-label { color:#d9c7d6; font-size:.68rem; font-weight:750; letter-spacing:.04em; }.side h2 { max-width:330px; margin:13px 0 0; font-size:clamp(1.7rem, 3vw, 2.65rem); font-weight:760; line-height:.99; letter-spacing:-.055em; }.side > p { max-width:300px; margin:11px 0 0; color:#d9c7d6; font-size:.78rem; line-height:1.55; }
+      .focus-detail { display:none; margin-top:27px; }.focus-detail.show { display:block; }.detail-card { padding:16px 0; border-top:1px solid var(--plum-2); }.detail-card strong { display:block; font-size:.83rem; line-height:1.35; }.detail-card p { margin:5px 0 13px; color:#cdbacd; font-size:.7rem; line-height:1.5; }.detail-card label { display:block; margin-bottom:6px; color:#cdbacd; font-size:.63rem; font-weight:720; letter-spacing:.05em; }.detail-card select { width:100%; height:35px; padding:0 8px; border:1px solid #604a64; border-radius:6px; background:#423047; color:#fff; font-size:.72rem; }.detail-actions { display:flex; gap:8px; margin-top:9px; }.detail-actions button { min-height:33px; padding:0 10px; border:1px solid #604a64; border-radius:6px; background:transparent; color:#fff; font-size:.69rem; font-weight:700; }.detail-actions button:last-child { color:#ffc0bb; }
+      .side-stack { margin-top:27px; }.side-stack > div { display:grid; grid-template-columns:12px minmax(0,1fr); gap:10px; padding:13px 0; border-top:1px solid var(--plum-2); }.side-stack i { width:8px; height:8px; margin-top:4px; border-radius:2px; background:var(--lime); transform:rotate(45deg); }.side-stack > div:nth-child(2) i { background:var(--coral); }.side-stack strong { display:block; font-size:.76rem; }.side-stack small { display:block; margin-top:3px; color:#cdbacd; font-size:.66rem; line-height:1.4; }
+      .start { width:100%; margin-top:auto; padding:13px 14px; border:0; border-radius:8px; background:var(--lime); color:#2e3d00; text-align:left; font-size:.75rem; font-weight:790; }.start::after { content:"→"; float:right; }.start:hover { background:#e3fb87; }
+      .toast { position:fixed; right:22px; bottom:22px; z-index:5; max-width:340px; padding:13px 15px; border-radius:10px; background:#fff; box-shadow:0 18px 42px -28px rgba(24,18,29,.58); color:#5f5160; font-size:.78rem; line-height:1.45; opacity:0; pointer-events:none; transform:translateY(12px); transition:opacity .2s ease, transform .2s ease; }.toast.show { opacity:1; transform:translateY(0); }
+      @media (max-width: 860px) { .shell { width:min(100%, 700px); min-height:100vh; margin:0; border-radius:0; }.topbar { gap:12px; padding:0 16px; }.topnav { overflow-x:auto; }.topnav button { padding:8px 9px; }.search { width:130px; }.workspace { grid-template-columns:1fr; }.side { min-height:300px; }.board { padding:30px 20px; }.composer { grid-template-columns:1fr 1fr; }.composer input { grid-column:1 / -1; }.queue-row { grid-template-columns:72px minmax(0,1fr) auto; gap:9px; }.queue-row.now { margin:0 -7px; padding:0 7px; }.task-title { font-size:.82rem; }.due { font-size:.57rem; }.side { padding:28px 20px; } }
+      @media (max-width: 540px) { .topbar { flex-wrap:wrap; min-height:105px; padding:12px 14px; }.toolbar { margin-left:auto; }.topnav { order:3; width:100%; }.topnav button { flex:1; }.search { display:none; }.new-task { min-width:98px; }.board-header { align-items:flex-start; flex-direction:column; }.count { margin-top:-8px; }.composer { grid-template-columns:1fr; }.composer input, .composer select { grid-column:auto; }.queue-row { grid-template-columns:1fr auto; padding:12px 0; gap:10px; }.row-position { grid-column:1 / -1; margin-bottom:-7px; }.queue-row.now { padding:12px 7px; }.task-main { min-width:0; }.task-title { white-space:normal; }.task-meta { flex-wrap:wrap; }.side h2 { max-width:285px; } }
+      @media (prefers-reduced-motion: no-preference) { .queue-row.now { transition: background .16s ease, transform .18s cubic-bezier(.2,.9,.3,1); } }
+    </style>
+  </head>
+  <body>
+    <!-- THESIS: A personal task workspace that surfaces one intentional start, then keeps its forward queue visible. OWN-WORLD: plum structural field, paper workspace, citron focus action, coral urgency. STORY: capture, sequence, and finish personal tasks without dashboard clutter. FIRST VIEWPORT: the Focus queue leads on the left; an active task detail and starting action occupy the right. FORM: Pulse Queue, selected by the user. FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md. -->
+    <div class="shell">
+      <header class="topbar">
+        <div class="brand"><span class="brand-mark" aria-hidden="true"></span>Taskspace</div>
+        <nav class="topnav" aria-label="Taskspace views">
+          <button class="active" type="button" data-view="focus">Focus</button>
+          <button type="button" data-view="all">All tasks</button>
+          <button type="button" data-view="inbox">Inbox</button>
+          <button type="button" data-view="upcoming">Upcoming</button>
+          <button type="button" data-view="completed">Completed</button>
+        </nav>
+        <div class="toolbar"><input class="search" type="search" aria-label="Search tasks" placeholder="Search tasks" /><button class="new-task" type="button">+ New task</button></div>
+      </header>
+      <main class="workspace">
+        <section class="board" aria-live="polite">
+          <header class="board-header"><div><h1 class="board-title">Today, in order.</h1><p class="board-subtitle">Give every task a place before it asks for your attention.</p></div><span class="count">0 open</span></header>
+          <form class="composer" aria-label="Add a task"><input required name="title" placeholder="What needs to get done?" aria-label="Task title" /><select name="due" aria-label="Due date"><option>Today</option><option>Tomorrow</option><option>Friday</option><option>No date</option></select><select name="priority" aria-label="Priority"><option>High</option><option selected>Medium</option><option>Low</option></select><button type="submit">Add task</button></form>
+          <div class="content"></div>
+        </section>
+        <aside class="side">
+          <span class="side-label">YOUR FOCUS WINDOW</span><h2>Keep the next move visible.</h2><p>Not a dashboard. Just enough structure to protect your attention.</p>
+          <div class="focus-detail" aria-live="polite"></div>
+          <div class="side-stack"><div><i></i><div><strong class="today-count">0 tasks due today</strong><small>Make the order feel intentional.</small></div></div><div><i></i><div><strong class="tomorrow-count">0 task tomorrow</strong><small>Already placed in your forward queue.</small></div></div></div>
+          <button class="start" type="button">Start the task in front of you</button>
+        </aside>
+      </main>
+    </div>
+    <div class="toast" role="status" aria-live="polite"></div>
+    <script>
+      const tasks = [
+        { id: 1, title: 'Map out the first task flow', due: 'Today', priority: 'High', horizon: 'start', inbox: false, completed: false },
+        { id: 2, title: 'Write down the next three priorities', due: 'Today', priority: 'Medium', horizon: 'after', inbox: false, completed: false },
+        { id: 3, title: 'Review the project setup', due: 'Tomorrow', priority: 'Low', horizon: 'then', inbox: false, completed: false },
+        { id: 4, title: 'Set up the task workspace', due: 'Friday', priority: 'Medium', horizon: 'hold', inbox: false, completed: false },
+        { id: 5, title: 'Capture the next idea before it disappears', due: 'No date', priority: 'Low', horizon: 'hold', inbox: true, completed: false },
+        { id: 6, title: 'Clear the notes from yesterday', due: 'Done', priority: 'Medium', horizon: 'hold', inbox: false, completed: true }
+      ];
+      const order = { start: 0, after: 1, then: 2, hold: 3 };
+      const labels = { start: 'START HERE', after: 'AFTER', then: 'THEN', hold: 'HOLD' };
+      const state = { view: 'focus', selectedId: 1, query: '', composerOpen: false };
+      const content = document.querySelector('.content');
+      const composer = document.querySelector('.composer');
+      const detail = document.querySelector('.focus-detail');
+      const toast = document.querySelector('.toast');
+      let toastTimer;
+
+      function announce(message) { toast.textContent = message; toast.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => toast.classList.remove('show'), 2600); }
+      function visibleTasks() {
+        const q = state.query.toLowerCase().trim();
+        let list = tasks.filter((task) => !q || task.title.toLowerCase().includes(q));
+        if (state.view === 'focus') list = list.filter((task) => !task.completed);
+        if (state.view === 'all') list = list.filter((task) => !task.completed);
+        if (state.view === 'inbox') list = list.filter((task) => task.inbox && !task.completed);
+        if (state.view === 'upcoming') list = list.filter((task) => !task.completed && !['Today', 'No date'].includes(task.due));
+        if (state.view === 'completed') list = list.filter((task) => task.completed);
+        return list.sort((a, b) => order[a.horizon] - order[b.horizon] || a.id - b.id);
+      }
+      function dueClass(due, completed) { if (completed) return 'done'; if (due === 'Tomorrow') return 'tomorrow'; if (['Friday', 'No date'].includes(due)) return 'later'; return ''; }
+      function row(task, focus = false) {
+        const isSelected = state.selectedId === task.id;
+        const position = focus ? `<span class="row-position">${labels[task.horizon]}</span>` : '';
+        return `<article class="queue-row ${focus && task.horizon === 'start' ? 'now' : ''}" data-id="${task.id}" data-selected="${isSelected}">${position}<div class="task-main"><button class="complete ${task.completed ? 'done' : ''}" data-action="complete" data-id="${task.id}" aria-label="${task.completed ? 'Mark task open' : 'Mark task complete'}"></button><div class="task-copy"><p class="task-title">${task.title}</p><div class="task-meta"><span>${task.priority} focus</span><span>·</span><span>${task.inbox ? 'Inbox' : 'Personal'}</span></div></div></div><span class="due ${dueClass(task.due, task.completed)}">${task.completed ? 'Done' : task.due}</span></article>`;
+      }
+      function empty(title, text) { return `<div class="empty"><strong>${title}</strong>${text}</div>`; }
+      function renderContent() {
+        const list = visibleTasks();
+        const headings = {
+          focus: ['Today, in order.', 'Give every task a place before it asks for your attention.'],
+          all: ['All active tasks.', 'Everything still open, sorted into the order you set.'],
+          inbox: ['Inbox.', 'A safe place to catch tasks before deciding where they belong.'],
+          upcoming: ['Coming up.', 'Tasks that are already waiting for a future day.'],
+          completed: ['Completed.', 'Work you finished stays here as a quiet record.']
+        };
+        document.querySelector('.board-title').textContent = headings[state.view][0];
+        document.querySelector('.board-subtitle').textContent = headings[state.view][1];
+        document.querySelector('.count').textContent = `${tasks.filter((t) => !t.completed).length} open`;
+        if (!list.length) { content.innerHTML = empty(state.query ? 'No matching tasks.' : 'Nothing here yet.', state.query ? 'Try a different search or create a new task.' : 'Add a task, or choose another view to continue.'); return; }
+        if (state.view === 'focus') content.innerHTML = `<section class="queue" aria-label="Focus queue">${list.map((task) => row(task, true)).join('')}<div class="inbox-note"><span>+</span><div>Tasks stay in the Inbox until you choose their place in the queue.</div></div></section>`;
+        else content.innerHTML = `<section class="view-list" aria-label="${headings[state.view][0]}">${list.map((task) => row(task, false)).join('')}</section>`;
+      }
+      function renderSide() {
+        const active = tasks.filter((t) => !t.completed);
+        const today = active.filter((t) => t.due === 'Today').length;
+        const tomorrow = active.filter((t) => t.due === 'Tomorrow').length;
+        document.querySelector('.today-count').textContent = `${today} ${today === 1 ? 'task' : 'tasks'} due today`;
+        document.querySelector('.tomorrow-count').textContent = `${tomorrow} ${tomorrow === 1 ? 'task' : 'tasks'} tomorrow`;
+        const selected = tasks.find((task) => task.id === state.selectedId && !task.completed);
+        if (!selected) { detail.classList.remove('show'); detail.innerHTML = ''; return; }
+        detail.classList.add('show');
+        detail.innerHTML = `<div class="detail-card"><strong>${selected.title}</strong><p>${selected.priority} priority · ${selected.due}</p><label for="horizon">PLACE IN QUEUE</label><select id="horizon" data-action="horizon" data-id="${selected.id}"><option value="start" ${selected.horizon === 'start' ? 'selected' : ''}>Start here</option><option value="after" ${selected.horizon === 'after' ? 'selected' : ''}>After</option><option value="then" ${selected.horizon === 'then' ? 'selected' : ''}>Then</option><option value="hold" ${selected.horizon === 'hold' ? 'selected' : ''}>Hold</option></select><div class="detail-actions"><button type="button" data-action="complete" data-id="${selected.id}">Complete task</button><button type="button" data-action="delete" data-id="${selected.id}">Delete</button></div></div>`;
+      }
+      function render() { renderContent(); renderSide(); document.querySelectorAll('[data-view]').forEach((button) => button.classList.toggle('active', button.dataset.view === state.view)); composer.classList.toggle('open', state.composerOpen); }
+      function toggleTask(id) { const task = tasks.find((item) => item.id === id); if (!task) return; task.completed = !task.completed; if (task.completed && state.selectedId === id) state.selectedId = tasks.find((item) => !item.completed)?.id ?? null; announce(task.completed ? 'Task completed. The queue has moved forward.' : 'Task moved back into your queue.'); render(); }
+      function deleteTask(id) { const index = tasks.findIndex((item) => item.id === id); if (index === -1) return; const [removed] = tasks.splice(index, 1); if (state.selectedId === id) state.selectedId = tasks.find((item) => !item.completed)?.id ?? null; announce(`Deleted “${removed.title}”.`); render(); }
+      document.addEventListener('click', (event) => {
+        const view = event.target.closest('[data-view]'); if (view) { state.view = view.dataset.view; render(); return; }
+        if (event.target.closest('.new-task')) { state.composerOpen = !state.composerOpen; render(); if (state.composerOpen) composer.querySelector('input').focus(); return; }
+        if (event.target.closest('.start')) { const first = visibleTasks().find((task) => !task.completed); if (first) { state.selectedId = first.id; announce(`Working on “${first.title}”.`); render(); } return; }
+        const action = event.target.closest('[data-action]'); if (action) { const id = Number(action.dataset.id); if (action.dataset.action === 'complete') toggleTask(id); if (action.dataset.action === 'delete') deleteTask(id); return; }
+        const rowEl = event.target.closest('.queue-row'); if (rowEl) { state.selectedId = Number(rowEl.dataset.id); render(); }
+      });
+      document.addEventListener('change', (event) => { const select = event.target.closest('[data-action="horizon"]'); if (!select) return; const task = tasks.find((item) => item.id === Number(select.dataset.id)); task.horizon = select.value; announce(`Moved “${task.title}” to ${labels[task.horizon].toLowerCase()}.`); render(); });
+      composer.addEventListener('submit', (event) => { event.preventDefault(); const form = new FormData(composer); const title = form.get('title').trim(); if (!title) return; const due = form.get('due'); tasks.push({ id: Date.now(), title, due, priority: form.get('priority'), horizon: state.view === 'inbox' ? 'hold' : 'after', inbox: state.view === 'inbox', completed: false }); state.selectedId = tasks[tasks.length - 1].id; state.composerOpen = false; composer.reset(); announce(`Added “${title}”.`); render(); });
+      document.querySelector('.search').addEventListener('input', (event) => { state.query = event.target.value; render(); });
+      render();
+    </script>
+  </body>
+</html>

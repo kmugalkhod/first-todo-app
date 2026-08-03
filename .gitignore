@@ -20,6 +20,11 @@
 # production
 /build
 
+# local environment files (keep the tracked .env.example)
+.env
+.env.local
+.env.*.local
+
 # misc
 .DS_Store
 *.pem
@@ -32,6 +37,8 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# but always track the secret-free template
+!.env.example
 
 # vercel
 .vercel
@@ -39,3 +46,14 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local dev server logs
+dev.log
+*.log
+
+# machine-local tooling / session state (not project content)
+.cursor/
+.codex/
+.lightcode/
+.impeccable/hook.cache.json
+.impeccable/config.local.json
