@@ -13,7 +13,6 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { Skeleton } from "@/components/ui/skeleton";
 import { CreateProjectDialog } from "./create-project-dialog";
 
 /**
@@ -22,11 +21,12 @@ import { CreateProjectDialog } from "./create-project-dialog";
  * Data is fetched server-side (in the parent layout via `listProjectsForActor`)
  * and passed in, so the list stays consistent app-wide; after creation the
  * dialog calls the server action, navigates to the new project and refreshes
- * the layout so the entry appears here immediately.
+ * the layout so the entry appears here immediately. The project list is
+ * resolved server-side before the layout renders, so no loading placeholder is
+ * needed in the list.
  *
- * States handled: loading skeleton (Suspense fallback), load error, and the
- * empty "create a project" prompt. The active project is read from the
- * `?project=<id>` search param and highlighted.
+ * States handled: load error and the empty "create a project" prompt. The
+ * active project is read from the `?project=<id>` search param and highlighted.
  */
 export function ProjectNav({
   projects,
@@ -44,8 +44,6 @@ export function ProjectNav({
   // newly created project appears immediately instead of waiting for a manual
   // refresh (Task 0201 Recommendation: update optimistically after creation).
   const [extras, setExtras] = React.useState<ProjectDTO[]>([]);
-
-  const loading = projects === null && !error;
 
   // Server list + optimistic extras, deduped by id (the extras drop out once
   // the refreshed server list includes them).
@@ -93,12 +91,7 @@ export function ProjectNav({
           </span>
         </button>
 
-        {loading ? (
-          <div className="space-y-1.5 px-2 pt-1.5">
-            <Skeleton className="h-[34px] w-full rounded-lg bg-white/10" />
-            <Skeleton className="h-[34px] w-full rounded-lg bg-white/10" />
-          </div>
-        ) : error ? (
+        {error ? (
           <p className="px-3 pt-1.5 text-xs leading-5 text-[#ffab9c]">
             {error}
           </p>
