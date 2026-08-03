@@ -1,0 +1,1 @@
+ALTER TYPE "public"."activity_action" ADD VALUE 'section_reordered' BEFORE 'section_removed';
