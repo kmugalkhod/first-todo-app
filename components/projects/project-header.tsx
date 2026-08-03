@@ -139,7 +139,7 @@ export function ProjectHeader({ userId }: { userId: string }) {
   // --- Loading state -------------------------------------------------------
   if (loading) {
     return (
-      <div className="border-b border-border/60 px-4 py-6 sm:px-8 sm:py-8">
+      <div className="px-4 pb-5 pt-8 sm:px-9 sm:pt-9">
         <div className="h-8 w-56 animate-pulse rounded-md bg-muted" />
         <div className="mt-3 h-4 w-full max-w-md animate-pulse rounded bg-muted/70" />
       </div>
@@ -160,7 +160,7 @@ export function ProjectHeader({ userId }: { userId: string }) {
   // --- Archived (read-only) header ------------------------------------------
   if (isArchived) {
     return (
-      <div className="border-b border-border/60 px-4 py-6 sm:px-8 sm:py-8">
+      <div className="px-4 pb-5 pt-8 sm:px-9 sm:pt-9">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-2">
@@ -173,7 +173,7 @@ export function ProjectHeader({ userId }: { userId: string }) {
               </span>
             </div>
             {project.description ? (
-              <p className="max-w-xl text-[0.95rem] leading-7 text-muted-foreground">
+              <p className="max-w-[570px] text-sm leading-6 text-muted-foreground">
                 {project.description}
               </p>
             ) : null}
@@ -201,14 +201,14 @@ export function ProjectHeader({ userId }: { userId: string }) {
 
   // --- Active header + Owner-only manage menu --------------------------------
   return (
-    <div className="border-b border-border/60 px-4 py-6 sm:px-8 sm:py-8">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+    <div className="px-4 pb-2 pt-8 sm:px-9 sm:pt-9">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="font-heading text-3xl font-semibold tracking-[-0.03em] text-foreground sm:text-4xl">
+          <h1 className="font-heading text-[clamp(2rem,4vw,3.7rem)] font-semibold leading-[0.94] tracking-[-0.04em] text-foreground">
             {project.name}
           </h1>
           {project.description ? (
-            <p className="mt-3 max-w-xl text-[0.95rem] leading-7 text-muted-foreground">
+            <p className="mt-3 max-w-[570px] text-sm leading-6 text-muted-foreground">
               {project.description}
             </p>
           ) : null}

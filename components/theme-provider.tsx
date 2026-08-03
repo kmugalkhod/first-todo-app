@@ -19,14 +19,9 @@ function systemTheme(): "light" | "dark" {
 }
 
 function getThemeSnapshot(): Theme {
-  try {
-    const stored = window.localStorage.getItem(STORAGE_KEY);
-    return stored === "light" || stored === "dark" || stored === "system"
-      ? stored
-      : "system";
-  } catch {
-    return "system";
-  }
+  // The approved Taskspace world is deliberately a paper-light workspace.
+  // Do not revive a persisted dark class that would depart from the prototype.
+  return "light";
 }
 
 /**
@@ -35,7 +30,7 @@ function getThemeSnapshot(): Theme {
  * emitting a script tag during React rendering.
  */
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = React.useState<Theme>("system");
+  const [theme, setThemeState] = React.useState<Theme>("light");
   const [resolvedTheme, setResolvedTheme] = React.useState<"light" | "dark">("light");
 
   React.useEffect(() => {

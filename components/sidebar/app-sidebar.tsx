@@ -126,7 +126,7 @@ export function AppSidebar({
   children: React.ReactNode;
 }) {
   return (
-    <Sidebar className="border-r border-white/10" collapsible="offcanvas">
+    <Sidebar className="border-r border-white/10 md:inset-y-5 md:left-5 md:h-[calc(100svh-2.5rem)] md:rounded-l-[18px]" collapsible="offcanvas">
       <SidebarHeader className="px-4 pb-3 pt-5">
         <div className="flex items-center gap-2.5 px-2">
           <span className="flex size-8 items-center justify-center rounded-xl bg-white font-bold text-[#202550] shadow-[0_8px_18px_-12px_rgba(10,10,40,0.9)]">

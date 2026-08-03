@@ -293,7 +293,7 @@ export function Taskspace({
   const isEmpty = !hasSections && !hasTasks;
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+    <div className="grid min-h-[calc(100svh-13rem)] gap-0 lg:grid-cols-[minmax(0,1fr)_minmax(330px,.62fr)]">
       <div className="min-w-0">
         {isEmpty ? (
           <div className="flex flex-col items-start gap-3 border-y border-dashed border-border py-10">
@@ -591,7 +591,7 @@ export function Taskspace({
         ) : null}
       </div>
 
-      {isMobile ? <Sheet open={!!selected} onOpenChange={(open) => { if (!open) setSelectedId(null); }}><SheetContent side="bottom" className="max-h-[78vh] overflow-y-auto rounded-t-xl border-border bg-[var(--taskspace-periwinkle-pale)] p-5 shadow-[var(--taskspace-mobile-sheet)]" aria-label="Task detail">{selected ? <TaskDetailRecord
+      {isMobile ? <Sheet open={!!selected} onOpenChange={(open) => { if (!open) setSelectedId(null); }}><SheetContent side="bottom" className="max-h-[78vh] overflow-y-auto rounded-t-[17px] border-border bg-[var(--taskspace-periwinkle-pale)] p-0 shadow-[var(--taskspace-mobile-sheet)]" aria-label="Task detail">{selected ? <TaskDetailRecord
             task={selected.task}
             projectName={projectName}
             projectId={projectId}

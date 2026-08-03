@@ -48,33 +48,44 @@
 }
 
 :root {
+  /* Taskspace design tokens — the prototype is deliberately light, paper-led
+     and cobalt-navigated rather than a generic neutral shadcn surface. */
+  --taskspace-ink: #202550;
+  --taskspace-muted: #69718d;
+  --taskspace-cobalt: #3543d6;
+  --taskspace-cobalt-deep: #252d95;
   --taskspace-periwinkle-pale: #eef0ff;
+  --taskspace-paper: #fbfbff;
+  --taskspace-canvas: #e1e4ff;
+  --taskspace-line: #dfe2ef;
+  --taskspace-citron: #edff81;
   --taskspace-coral: #ff765d;
+  --taskspace-completion-green: #3b8b69;
   --taskspace-mobile-sheet: 0 -20px 50px -35px #1c1f4a8c;
-  --background: oklch(0.986 0.004 70);
-  --foreground: oklch(0.22 0.014 45);
-  --card: oklch(0.998 0.002 70);
-  --card-foreground: oklch(0.22 0.014 45);
-  --popover: oklch(0.998 0.002 70);
-  --popover-foreground: oklch(0.22 0.014 45);
-  --primary: oklch(0.57 0.19 32);
-  --primary-foreground: oklch(0.99 0.006 70);
-  --secondary: oklch(0.95 0.009 70);
-  --secondary-foreground: oklch(0.25 0.014 45);
-  --muted: oklch(0.955 0.007 70);
-  --muted-foreground: oklch(0.5 0.017 45);
-  --accent: oklch(0.947 0.012 55);
-  --accent-foreground: oklch(0.25 0.014 45);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.895 0.01 65);
-  --input: oklch(0.87 0.012 65);
-  --ring: oklch(0.63 0.17 32);
+  --background: var(--taskspace-paper);
+  --foreground: var(--taskspace-ink);
+  --card: #ffffff;
+  --card-foreground: var(--taskspace-ink);
+  --popover: #ffffff;
+  --popover-foreground: var(--taskspace-ink);
+  --primary: var(--taskspace-cobalt);
+  --primary-foreground: #ffffff;
+  --secondary: var(--taskspace-periwinkle-pale);
+  --secondary-foreground: var(--taskspace-ink);
+  --muted: var(--taskspace-periwinkle-pale);
+  --muted-foreground: var(--taskspace-muted);
+  --accent: var(--taskspace-periwinkle-pale);
+  --accent-foreground: var(--taskspace-cobalt-deep);
+  --destructive: var(--taskspace-coral);
+  --border: var(--taskspace-line);
+  --input: var(--taskspace-line);
+  --ring: var(--taskspace-coral);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
+  --radius: 0.5rem;
   /* Taskspace cobalt navigation field (DESIGN.md palette). */
   --sidebar: #3543d6;
   --sidebar-foreground: #ffffff;
@@ -127,7 +138,7 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-[var(--taskspace-canvas)] text-foreground;
   }
   html {
     @apply font-sans;

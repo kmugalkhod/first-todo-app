@@ -106,9 +106,9 @@ export function TaskDetailRecord({
   return (
     <aside
       aria-label="Task detail"
-      className="flex flex-col gap-5 rounded-t-2xl border-l border-border/70 bg-[#eef0ff]/55 p-5 sm:rounded-r-2xl dark:bg-[#eef0ff]/5"
+      className="flex min-h-full flex-col gap-[19px] border-l border-border bg-[var(--taskspace-periwinkle-pale)] p-[22px] dark:bg-[var(--taskspace-periwinkle-pale)]/15"
     >
-      <p className="text-[0.62rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+      <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--taskspace-cobalt)]">
         {projectName}
         {sectionName ? ` / ${sectionName}` : ""}
       </p>
@@ -132,7 +132,7 @@ export function TaskDetailRecord({
         </span>
         <h2
           className={cn(
-            "font-heading text-xl font-semibold tracking-[-0.02em] text-foreground",
+            "font-heading text-[1.45rem] font-semibold tracking-[-0.04em] text-foreground",
             completed && "text-muted-foreground line-through",
           )}
         >
