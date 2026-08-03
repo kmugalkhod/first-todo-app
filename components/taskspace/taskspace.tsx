@@ -2,9 +2,24 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { ListChecks, Plus } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronUp,
+  Check,
+  ListChecks,
+  Pencil,
+  Plus,
+  Trash2,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 
+import {
+  createSectionAction,
+  removeSectionAction,
+  renameSectionAction,
+  reorderSectionsAction,
+} from "@/lib/server-actions/sections";
 import {
   completeTaskAction,
   createTaskAction,
@@ -14,9 +29,11 @@ import { cn } from "@/lib/utils";
 import { TaskDetailRecord } from "./task-detail-record";
 import { TaskRow } from "./task-row";
 import type { TaskGroup, TaskRowData } from "./types";
+import type { ActionResult } from "@/lib/server-actions/types";
 
 /**
  * Task 0301 — the sectioned task list + coexisting detail record (Taskspace).
+ * Task 0302 — section management (add / rename / reorder / remove).
  *
  * Drives the paper task list from server-fetched `groups`:
  * - selecting a row shows its record in the right-hand panel without navigating
@@ -24,11 +41,19 @@ import type { TaskGroup, TaskRowData } from "./types";
  * - the completion control calls the DAO-backed actions with an optimistic
  *   update (never colour-only),
  * - each section carries the small citron "+ Add task" quick-add affordance
- *   (Task 0301 step 6).
+ *   (Task 0301 step 6),
+ * - editors/owners can add, rename, reorder (up/down — accessible, no drag
+ *   required) and remove sections (Task 0302; removing releases tasks to the
+ *   project's catch-all bucket, never orphaning them).
  *
- * Mutations stay optimistic and reconcile via `router.refresh()` so the server
- * remains the source of truth.
+ * Mutations stay optimistic where shown and reconcile via `router.refresh()` so
+ * the server remains the source of truth.
  */
+
+/** Small focus/ring style shared by the section + quick-add controls. */
+const CONTROL_CLASS =
+  "flex size-6 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff765d] focus-visible:ring-offset-1 disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-muted-foreground";
+
 export function Taskspace({
   projectId,
   projectName,
@@ -55,6 +80,15 @@ export function Taskspace({
   const [draft, setDraft] = React.useState("");
   const [busyIds, setBusyIds] = React.useState<ReadonlySet<string>>(
     new Set(),
+  );
+
+  // Section management (Task 0302) state.
+  const [creatingSection, setCreatingSection] = React.useState(false);
+  const [sectionDraft, setSectionDraft] = React.useState("");
+  const [renamingId, setRenamingId] = React.useState<string | null>(null);
+  const [renameDraft, setRenameDraft] = React.useState("");
+  const [confirmingDelete, setConfirmingDelete] = React.useState<string | null>(
+    null,
   );
 
   // Re-sync whenever the server sends a fresh snapshot (after a create /
@@ -84,6 +118,24 @@ export function Taskspace({
         next.delete(id);
         return next;
       });
+    });
+  }
+
+  /** Pump a section mutation through the busy guard + refresh on success. */
+  function runSectionAction(
+    busyKey: string,
+    fn: () => Promise<ActionResult<unknown>>,
+  ) {
+    withBusy(busyKey, async () => {
+      const res = await fn();
+      if (!res.ok) {
+        toast.error(res.error.message ?? "Couldn't update the section.");
+        return;
+      }
+      setCreatingSection(false);
+      setRenamingId(null);
+      setConfirmingDelete(null);
+      router.refresh();
     });
   }
 
@@ -138,6 +190,50 @@ export function Taskspace({
     });
   }
 
+  function submitCreateSection(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const name = sectionDraft.trim();
+    if (!name) return;
+    setSectionDraft("");
+    runSectionAction("__new_section__", () =>
+      createSectionAction(projectId, { name }),
+    );
+  }
+
+  function submitRename(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const name = renameDraft.trim();
+    if (!name || !renamingId) return;
+    runSectionAction(`__rename_${renamingId}`, () =>
+      renameSectionAction(renamingId, name),
+    );
+  }
+
+  function confirmDeleteSection(sectionId: string) {
+    if (confirmingDelete === sectionId) {
+      runSectionAction(`__delete_${sectionId}`, () =>
+        removeSectionAction(sectionId),
+      );
+    } else {
+      setConfirmingDelete(sectionId);
+    }
+  }
+
+  /** Move a real section up/down and persist the new order. */
+  function moveSection(sectionId: string, delta: number) {
+    const sectionIds = state
+      .filter((g) => g.sectionId != null)
+      .map((g) => g.sectionId as string);
+    const index = sectionIds.indexOf(sectionId);
+    const target = index + delta;
+    if (index === -1 || target < 0 || target >= sectionIds.length) return;
+    const next = [...sectionIds];
+    [next[index], next[target]] = [next[target], next[index]];
+    runSectionAction("__reorder__", () =>
+      reorderSectionsAction(projectId, next),
+    );
+  }
+
   const isEmpty = state.every((group) => group.tasks.length === 0);
 
   return (
@@ -158,83 +254,264 @@ export function Taskspace({
           </div>
         ) : (
           <div className="flex flex-col">
-            {state.map((group) => (
-              <section key={group.key} aria-label={group.label}>
-                <header className="flex items-center justify-between gap-4 py-2.5">
-                  <h2 className="flex items-center gap-2 text-[0.62rem] font-[760] uppercase tracking-[0.08em] text-muted-foreground">
-                    {group.label}
-                    {group.tasks.length > 0 ? (
-                      <span className="rounded-full bg-muted px-2 py-0.5 text-[0.6rem] font-semibold">
-                        {group.tasks.length}
-                      </span>
-                    ) : null}
-                  </h2>
-                  {canEdit && (
+            {canEdit ? (
+              <div className="mb-2 flex justify-end">
+                {creatingSection ? (
+                  <form
+                    onSubmit={submitCreateSection}
+                    className="flex w-full items-center gap-2 rounded-lg border border-input bg-background px-2.5 py-1.5 focus-within:ring-3 focus-within:ring-[#ff765d]/40"
+                  >
+                    <Plus className="size-4 shrink-0 text-[#edff81] mix-blend-multiply dark:mix-blend-screen" />
+                    <input
+                      autoFocus
+                      value={sectionDraft}
+                      onChange={(event) => setSectionDraft(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Escape") {
+                          setCreatingSection(false);
+                          setSectionDraft("");
+                        }
+                      }}
+                      placeholder="Section name"
+                      aria-label="New section name"
+                      className="h-7 w-full bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
+                    />
+                    <button
+                      type="submit"
+                      className="rounded-md px-2 py-0.5 text-[0.68rem] font-bold text-[#5963ae] hover:bg-muted"
+                    >
+                      Add section
+                    </button>
                     <button
                       type="button"
+                      aria-label="Cancel new section"
                       onClick={() => {
-                        setComposingKey(
-                          composingKey === group.key ? null : group.key,
-                        );
-                        if (composingKey !== group.key) setDraft("");
+                        setCreatingSection(false);
+                        setSectionDraft("");
                       }}
-                      className="flex items-center gap-1 rounded-md px-1.5 py-1 text-[0.68rem] font-[760] text-[#5963ae] transition-colors hover:bg-muted hover:text-[#252d95] focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[#ff765d] focus-visible:ring-offset-2"
+                      className={cn(CONTROL_CLASS, "size-6")}
                     >
-                      <Plus className="size-3.5" />
-                      Add task
+                      <X className="size-4" />
                     </button>
-                  )}
-                </header>
-
-                {composingKey === group.key && canEdit ? (
-                  <form onSubmit={submitQuickAdd} className="pb-3">
-                    <div className="flex items-center gap-2 rounded-lg border border-input bg-background px-2.5 py-1.5 focus-within:ring-3 focus-within:ring-[#ff765d]/40">
-                      <Plus
-                        className="size-4 shrink-0 text-[#edff81] mix-blend-multiply dark:mix-blend-screen"
-                      />
-                      <input
-                        autoFocus
-                        value={draft}
-                        onChange={(event) => setDraft(event.target.value)}
-                        onKeyDown={(event) => {
-                          if (event.key === "Escape") setComposingKey(null);
-                        }}
-                        placeholder="What needs to get done?"
-                        aria-label={`New task in ${group.label}`}
-                        className="h-7 w-full bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
-                      />
-                      <button
-                        type="submit"
-                        className="rounded-md px-2 py-0.5 text-[0.68rem] font-bold text-[#5963ae] hover:bg-muted"
-                      >
-                        Add
-                      </button>
-                    </div>
                   </form>
-                ) : null}
-
-                {group.tasks.length > 0 ? (
-                  <div className="flex flex-col border-t border-[#ebedf4]">
-                    {group.tasks.map((task) => (
-                      <TaskRow
-                        key={task.id}
-                        task={task}
-                        meUserId={meUserId}
-                        selected={task.id === selectedId}
-                        onSelect={setSelectedId}
-                        onToggleComplete={toggleComplete}
-                      />
-                    ))}
-                  </div>
                 ) : (
-                  composingKey !== group.key && (
-                    <p className="py-4 text-sm text-muted-foreground">
-                      No tasks in this section.
-                    </p>
-                  )
+                  <button
+                    type="button"
+                    disabled={busyIds.has("__reorder__")}
+                    onClick={() => setCreatingSection(true)}
+                    className="flex items-center gap-1 rounded-md px-2 py-1 text-[0.68rem] font-[760] text-[#5963ae] transition-colors hover:bg-muted hover:text-[#252d95] focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[#ff765d] focus-visible:ring-offset-2"
+                  >
+                    <Plus className="size-3.5" />
+                    New section
+                  </button>
                 )}
-              </section>
-            ))}
+              </div>
+            ) : null}
+
+            {state.map((group) => {
+              const isRealSection = group.sectionId != null;
+              const sectionIds = state
+                .filter((g) => g.sectionId != null)
+                .map((g) => g.sectionId as string);
+              const sectionIndex = sectionIds.indexOf(group.sectionId as string);
+              const isFirst = sectionIndex === 0;
+              const isLast = sectionIndex === sectionIds.length - 1;
+              const renamingThis = renamingId === group.sectionId;
+              const deletingThis = confirmingDelete === group.sectionId;
+
+              return (
+                <section key={group.key} aria-label={group.label}>
+                  <header className="flex items-center justify-between gap-4 py-2.5">
+                    {renamingThis ? (
+                      <form
+                        onSubmit={submitRename}
+                        className="flex w-full items-center gap-2"
+                      >
+                        <input
+                          autoFocus
+                          value={renameDraft}
+                          onChange={(event) => setRenameDraft(event.target.value)}
+                          onKeyDown={(event) => {
+                            if (event.key === "Escape") {
+                              setRenamingId(null);
+                            }
+                          }}
+                          aria-label="Rename section"
+                          className="h-7 min-w-0 flex-1 rounded-md border border-input bg-background px-2 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-[#ff765d]"
+                        />
+                        <button
+                          type="submit"
+                          aria-label="Save section name"
+                          className={cn(CONTROL_CLASS)}
+                        >
+                          <Check className="size-4" />
+                        </button>
+                        <NoiseButton
+                          aria-label="Cancel rename"
+                          onClick={() => setRenamingId(null)}
+                        >
+                          <X className="size-4" />
+                        </NoiseButton>
+                      </form>
+                    ) : (
+                      <h2 className="flex items-center gap-2 text-[0.62rem] font-[760] uppercase tracking-[0.08em] text-muted-foreground">
+                        {group.label}
+                        {group.tasks.length > 0 ? (
+                          <span className="rounded-full bg-muted px-2 py-0.5 text-[0.6rem] font-semibold">
+                            {group.tasks.length}
+                          </span>
+                        ) : null}
+                      </h2>
+                    )}
+
+                    <div className="flex items-center gap-1">
+                      {isRealSection && canEdit && !renamingThis ? (
+                        <>
+                          <button
+                            type="button"
+                            aria-label={`Move ${group.label} up`}
+                            disabled={
+                              isFirst || busyIds.has("__reorder__")
+                            }
+                            onClick={() => moveSection(group.sectionId!, -1)}
+                            className={cn(CONTROL_CLASS)}
+                          >
+                            <ChevronUp className="size-4" />
+                          </button>
+                          <button
+                            type="button"
+                            aria-label={`Move ${group.label} down`}
+                            disabled={
+                              isLast || busyIds.has("__reorder__")
+                            }
+                            onClick={() => moveSection(group.sectionId!, 1)}
+                            className={cn(CONTROL_CLASS)}
+                          >
+                            <ChevronDown className="size-4" />
+                          </button>
+                          <button
+                            type="button"
+                            aria-label={`Rename ${group.label}`}
+                            disabled={busyIds.has("__reorder__")}
+                            onClick={() => {
+                              setRenamingId(group.sectionId!);
+                              setRenameDraft(group.label);
+                            }}
+                            className={cn(CONTROL_CLASS)}
+                          >
+                            <Pencil className="size-4" />
+                          </button>
+                          <button
+                            type="button"
+                            aria-label={`Delete ${group.label}`}
+                            disabled={busyIds.has("__reorder__")}
+                            onClick={() => confirmDeleteSection(group.sectionId!)}
+                            className={cn(
+                              CONTROL_CLASS,
+                              deletingThis &&
+                                "text-[#ff765d] hover:bg-[#ff765d]/10 hover:text-[#ff765d]",
+                            )}
+                          >
+                            <Trash2 className="size-4" />
+                          </button>
+                        </>
+                      ) : null}
+
+                      {canEdit && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setComposingKey(
+                              composingKey === group.key ? null : group.key,
+                            );
+                            if (composingKey !== group.key) setDraft("");
+                          }}
+                          className="flex items-center gap-1 rounded-md px-1.5 py-1 text-[0.68rem] font-[760] text-[#5963ae] transition-colors hover:bg-muted hover:text-[#252d95] focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[#ff765d] focus-visible:ring-offset-2"
+                        >
+                          <Plus className="size-3.5" />
+                          Add task
+                        </button>
+                      )}
+                    </div>
+                  </header>
+
+                  {deletingThis ? (
+                    <div className="mb-3 flex items-center justify-between gap-3 rounded-lg border border-[#ff765d]/40 bg-[#ff765d]/5 px-3 py-2">
+                      <p className="text-xs leading-5 text-muted-foreground">
+                        Its tasks will move to the project&apos;s &ldquo;No
+                        section&rdquo; bucket.
+                      </p>
+                      <div className="flex shrink-0 items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => confirmDeleteSection(group.sectionId!)}
+                          disabled={busyIds.has(`__delete_${group.sectionId}`)}
+                          className="rounded-md bg-[#ff765d] px-2 py-1 text-[0.68rem] font-bold text-white hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff765d] focus-visible:ring-offset-1"
+                        >
+                          Delete
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setConfirmingDelete(null)}
+                          className="rounded-md px-2 py-1 text-[0.68rem] font-bold text-muted-foreground hover:bg-muted"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {composingKey === group.key && canEdit ? (
+                    <form onSubmit={submitQuickAdd} className="pb-3">
+                      <div className="flex items-center gap-2 rounded-lg border border-input bg-background px-2.5 py-1.5 focus-within:ring-3 focus-within:ring-[#ff765d]/40">
+                        <Plus
+                          className="size-4 shrink-0 text-[#edff81] mix-blend-multiply dark:mix-blend-screen"
+                        />
+                        <input
+                          autoFocus
+                          value={draft}
+                          onChange={(event) => setDraft(event.target.value)}
+                          onKeyDown={(event) => {
+                            if (event.key === "Escape") setComposingKey(null);
+                          }}
+                          placeholder="What needs to get done?"
+                          aria-label={`New task in ${group.label}`}
+                          className="h-7 w-full bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
+                        />
+                        <button
+                          type="submit"
+                          className="rounded-md px-2 py-0.5 text-[0.68rem] font-bold text-[#5963ae] hover:bg-muted"
+                        >
+                          Add
+                        </button>
+                      </div>
+                    </form>
+                  ) : null}
+
+                  {group.tasks.length > 0 ? (
+                    <div className="flex flex-col border-t border-[#ebedf4]">
+                      {group.tasks.map((task) => (
+                        <TaskRow
+                          key={task.id}
+                          task={task}
+                          meUserId={meUserId}
+                          selected={task.id === selectedId}
+                          onSelect={setSelectedId}
+                          onToggleComplete={toggleComplete}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    composingKey !== group.key &&
+                    !deletingThis && (
+                      <p className="py-4 text-sm text-muted-foreground">
+                        No tasks in this section.
+                      </p>
+                    )
+                  )}
+                </section>
+              );
+            })}
           </div>
         )}
       </div>
@@ -251,4 +528,12 @@ export function Taskspace({
       </div>
     </div>
   );
+}
+
+/** Tiny icon button using the shared control styling. */
+function NoiseButton({
+  className,
+  ...props
+}: React.ButtonHTMLAttributes<HTMLButtonElement>) {
+  return <button type="button" className={cn(CONTROL_CLASS, className)} {...props} />;
 }

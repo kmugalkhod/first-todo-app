@@ -165,6 +165,7 @@ export const activityActionEnum = pgEnum("activity_action", [
   "comment_deleted",
   "section_created",
   "section_renamed",
+  "section_reordered",
   "section_removed",
   "label_created",
   "label_renamed",

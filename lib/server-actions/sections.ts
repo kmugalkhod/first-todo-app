@@ -4,7 +4,7 @@ import {
   createSection,
   removeSection,
   renameSection,
-  reorderSection,
+  reorderSections,
 } from "@/lib/data-access";
 import type {
   CreateSectionInput,
@@ -44,14 +44,15 @@ export async function renameSectionAction(
   });
 }
 
-/** Reposition a section within its project. */
-export async function reorderSectionAction(
-  sectionId: string,
-  position: number,
-): Promise<ActionResult<SectionDTO>> {
+/** Reorder a project's sections to match `orderedIds` (dense positions). */
+export async function reorderSectionsAction(
+  projectId: string,
+  orderedIds: string[],
+): Promise<ActionResult<null>> {
   return toActionResult(async () => {
     const actor = await requireActor();
-    return reorderSection(actor, sectionId, position);
+    await reorderSections(actor, projectId, orderedIds);
+    return null;
   });
 }
 
