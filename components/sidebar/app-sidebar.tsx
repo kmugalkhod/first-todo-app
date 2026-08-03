@@ -44,10 +44,10 @@ import {
  * brand, muted-periwinkle labels and translucent-white hover/active fills.
  */
 const workspaceItems = [
-  { title: "All tasks", icon: ListTodo, active: true },
-  { title: "Inbox", icon: Inbox },
-  { title: "Upcoming", icon: CalendarClock },
-  { title: "Completed", icon: CheckCircle2 },
+  { title: "Today", icon: ListTodo, href: "/?view=today" },
+  { title: "Inbox", icon: Inbox, href: "/?view=inbox" },
+  { title: "Upcoming", icon: CalendarClock, href: "/?view=upcoming" },
+  { title: "Search", icon: CheckCircle2, href: "/?view=search" },
 ];
 
 function initials(name?: string | null, email?: string | null) {
@@ -132,7 +132,7 @@ export function AppSidebar({
           <span className="flex size-8 items-center justify-center rounded-xl bg-white font-bold text-[#202550] shadow-[0_8px_18px_-12px_rgba(10,10,40,0.9)]">
             T
           </span>
-          <span className="text-[0.95rem] font-extrabold tracking-[-0.04em] text-white">
+          <span className="text-sm font-extrabold tracking-[-0.04em] text-white">
             Taskspace
           </span>
         </div>
@@ -169,7 +169,7 @@ export function AppSidebar({
               {workspaceItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
-                    isActive={item.active}
+                    render={<Link href={item.href} />}
                     className="h-[34px] gap-[9px] rounded-lg px-2.5 text-[0.74rem] font-[650] text-[#e1e3ff] hover:bg-white/10 hover:text-[#e1e3ff] data-[active=true]:bg-white/15"
                   >
                     <item.icon className="size-[15px]" strokeWidth={1.8} />

@@ -40,12 +40,7 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} ${archivoDisplay.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
+        <ThemeProvider>
           <TooltipProvider>{children}</TooltipProvider>
           <Toaster />
         </ThemeProvider>

@@ -3,10 +3,12 @@
 import {
   assignTask,
   completeTask,
+  createInboxTask,
   createTask,
   deleteTask,
   moveTaskToProject,
   reopenTask,
+  reorderTasks,
   setTaskLabels,
   updateTask,
 } from "@/lib/data-access";
@@ -40,6 +42,13 @@ export async function createTaskAction(
   });
 }
 
+/** Create a private actor-owned Inbox task. */
+export async function createInboxTaskAction(
+  input: Pick<CreateTaskInput, "title" | "description" | "priority" | "scheduledFor">,
+): Promise<ActionResult<TaskDTO>> {
+  return toActionResult(async () => createInboxTask(await requireActor(), input));
+}
+
 /** Update editable task fields (title, description, priority, scheduling, …). */
 export async function updateTaskAction(
   taskId: string,
@@ -57,6 +66,18 @@ export async function moveTaskAction(
   input: { sectionId?: string | null; position?: number },
 ): Promise<ActionResult<TaskDTO>> {
   return updateTaskAction(taskId, input);
+}
+
+/** Persist an accessible up/down (or drag) ordering for direct section tasks. */
+export async function reorderTasksAction(
+  projectId: string,
+  sectionId: string | null,
+  orderedIds: string[],
+): Promise<ActionResult<null>> {
+  return toActionResult(async () => {
+    await reorderTasks(await requireActor(), projectId, sectionId, orderedIds);
+    return null;
+  });
 }
 
 /**

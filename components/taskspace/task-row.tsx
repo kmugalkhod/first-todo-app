@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Trash2 } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, Trash2 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import {
@@ -31,6 +31,9 @@ export function TaskRow({
   onSelect,
   onToggleComplete,
   onDelete,
+  onMove,
+  canMoveUp = false,
+  canMoveDown = false,
 }: {
   task: TaskRowData;
   selected: boolean;
@@ -40,13 +43,17 @@ export function TaskRow({
   onToggleComplete: (taskId: string, complete: boolean) => void;
   /** Deletes the task; render the trailing trash affordance only when provided. */
   onDelete?: (taskId: string) => void;
+  /** Accessible manual ordering controls; drag is intentionally not required. */
+  onMove?: (taskId: string, direction: "up" | "down") => void;
+  canMoveUp?: boolean;
+  canMoveDown?: boolean;
 }) {
   const completed = task.status === "completed";
   const dueLabel = formatDueDate(task.scheduledFor);
   const isOwnedByMe = task.owner?.id != null && task.owner.id === meUserId;
 
   const surface =
-    "group grid min-h-[58px] grid-cols-[21px_minmax(0,1fr)_auto_auto_auto_auto_26px] items-center gap-3 border-b border-[#ebedf4]";
+    "group grid min-h-[58px] grid-cols-[21px_minmax(0,1fr)_auto_auto_auto_auto_auto_26px] items-center gap-3 border-b border-[#ebedf4]";
 
   return (
     <article
@@ -89,6 +96,8 @@ export function TaskRow({
         <small className="mt-0.5 block truncate text-[0.65rem] text-[#8990a7] dark:text-muted-foreground">
           {completed
             ? "Completed"
+            : task.subtaskProgress
+              ? `${task.subtaskProgress.completed}/${task.subtaskProgress.total} subtasks`
             : task.priority === "p1" && !task.overdue
               ? "High priority"
               : task.scheduledFor
@@ -151,6 +160,31 @@ export function TaskRow({
         </span>
       ) : (
         <span aria-hidden="true" className="w-px" />
+      )}
+
+      {onMove ? (
+        <span className="hidden flex-col sm:flex" aria-label={`Reorder ${task.title}`}>
+          <button
+            type="button"
+            aria-label={`Move ${task.title} up`}
+            disabled={!canMoveUp}
+            onClick={() => onMove(task.id, "up")}
+            className="flex size-4 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff765d] disabled:opacity-35"
+          >
+            <ChevronUp className="size-3" />
+          </button>
+          <button
+            type="button"
+            aria-label={`Move ${task.title} down`}
+            disabled={!canMoveDown}
+            onClick={() => onMove(task.id, "down")}
+            className="flex size-4 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff765d] disabled:opacity-35"
+          >
+            <ChevronDown className="size-3" />
+          </button>
+        </span>
+      ) : (
+        <span aria-hidden="true" className="hidden sm:block" />
       )}
 
       {onDelete ? (

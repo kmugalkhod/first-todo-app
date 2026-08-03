@@ -24,9 +24,12 @@ import {
   completeTaskAction,
   createTaskAction,
   deleteTaskAction,
+  reorderTasksAction,
   reopenTaskAction,
 } from "@/lib/server-actions/tasks";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { TaskDetailRecord } from "./task-detail-record";
 import { TaskRow } from "./task-row";
 import type { TaskGroup, TaskRowData } from "./types";
@@ -61,14 +64,21 @@ export function Taskspace({
   meUserId,
   canEdit,
   groups,
+  labels = [],
+  members = [],
+  canModerateComments = false,
 }: {
   projectId: string;
   projectName: string;
   meUserId: string | null;
   canEdit: boolean;
   groups: TaskGroup[];
+  labels?: Array<{ id: string; name: string }>;
+  members?: Array<{ id: string; name: string }>;
+  canModerateComments?: boolean;
 }) {
   const router = useRouter();
+  const isMobile = useIsMobile();
   const [state, setState] = React.useState(groups);
   const [selectedId, setSelectedId] = React.useState<string | null>(() => {
     for (const group of groups) {
@@ -82,6 +92,7 @@ export function Taskspace({
   const [busyIds, setBusyIds] = React.useState<ReadonlySet<string>>(
     new Set(),
   );
+  const [showCompleted, setShowCompleted] = React.useState(false);
 
   // Section management (Task 0302) state.
   const [creatingSection, setCreatingSection] = React.useState(false);
@@ -256,11 +267,29 @@ export function Taskspace({
     );
   }
 
+  /** Reorder direct tasks without making drag-and-drop a prerequisite. */
+  function moveTask(group: TaskGroup, taskId: string, direction: "up" | "down") {
+    if (!group.sectionId && group.key !== "unsectioned") return;
+    const index = group.tasks.findIndex((task) => task.id === taskId);
+    const target = index + (direction === "up" ? -1 : 1);
+    if (index < 0 || target < 0 || target >= group.tasks.length) return;
+    const ordered = group.tasks.map((task) => task.id);
+    [ordered[index], ordered[target]] = [ordered[target], ordered[index]];
+    withBusy(`__task_order_${group.key}`, async () => {
+      const result = await reorderTasksAction(projectId, group.sectionId, ordered);
+      if (!result.ok) {
+        toast.error(result.error.message ?? "Couldn't reorder the tasks.");
+        return;
+      }
+      router.refresh();
+    });
+  }
+
   // The workspace is only "empty" when there are no sections and no tasks at
   // all — a section that the editor just created shows even while it holds zero
   // tasks, so the New section control stays visible instead of being masked.
   const hasSections = state.some((group) => group.sectionId != null);
-  const hasTasks = state.some((group) => group.tasks.length > 0);
+  const hasTasks = state.some((group) => group.tasks.some((task) => task.status === "active"));
   const isEmpty = !hasSections && !hasTasks;
 
   return (
@@ -282,6 +311,9 @@ export function Taskspace({
         ) : (
           <div className="flex flex-col">
             {state.map((group) => {
+              const visibleTasks = showCompleted
+                ? group.tasks
+                : group.tasks.filter((task) => task.status === "active");
               const isRealSection = group.sectionId != null;
               const sectionIds = state
                 .filter((g) => g.sectionId != null)
@@ -333,17 +365,17 @@ export function Taskspace({
                             className={cn(
                               "truncate font-semibold tracking-[-0.025em]",
                               group.sectionId != null
-                                ? "text-[0.95rem] text-[#202550] dark:text-foreground"
-                                : "text-[0.7rem] uppercase tracking-[0.07em] text-[#8790ac] dark:text-muted-foreground",
+                                ? "text-sm text-[#202550] dark:text-foreground"
+                                : "text-xs uppercase tracking-[0.07em] text-[#8790ac] dark:text-muted-foreground",
                             )}
                           >
                             {group.sectionId != null
                               ? group.label
                               : "No section"}
                           </h2>
-                          <span className="shrink-0 text-[0.65rem] font-bold text-[#8790ac] dark:text-muted-foreground">
-                            {group.tasks.length}{" "}
-                            {group.tasks.length === 1 ? "task" : "tasks"}
+                          <span className="shrink-0 text-xs font-bold text-[#8790ac] dark:text-muted-foreground">
+                            {visibleTasks.length}{" "}
+                            {visibleTasks.length === 1 ? "task" : "tasks"}
                           </span>
                         </>
                       )}
@@ -407,7 +439,7 @@ export function Taskspace({
                             );
                             if (composingKey !== group.key) setDraft("");
                           }}
-                          className="ml-1 flex items-center gap-1 rounded-md border-0 bg-transparent p-1 text-[0.68rem] font-bold text-[#5965bd] transition-colors hover:text-[#252d95] focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[#ff765d] dark:text-[#8b93d6] dark:hover:text-[#c3c9ff]"
+                          className="ml-1 flex items-center gap-1 rounded-md border-0 bg-transparent p-1 text-xs font-bold text-[#5965bd] transition-colors hover:text-[#252d95] focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[#ff765d] dark:text-[#8b93d6] dark:hover:text-[#c3c9ff]"
                         >
                           <Plus className="size-3.5" />
                           Add task
@@ -427,14 +459,14 @@ export function Taskspace({
                           type="button"
                           onClick={() => confirmDeleteSection(group.sectionId!)}
                           disabled={busyIds.has(`__delete_${group.sectionId}`)}
-                          className="rounded-md bg-[#ff765d] px-2 py-1 text-[0.68rem] font-bold text-white hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff765d] focus-visible:ring-offset-1"
+                          className="rounded-md bg-[#ff765d] px-2 py-1 text-xs font-bold text-white hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff765d] focus-visible:ring-offset-1"
                         >
                           Delete
                         </button>
                         <button
                           type="button"
                           onClick={() => setConfirmingDelete(null)}
-                          className="rounded-md px-2 py-1 text-[0.68rem] font-bold text-muted-foreground hover:bg-muted"
+                          className="rounded-md px-2 py-1 text-xs font-bold text-muted-foreground hover:bg-muted"
                         >
                           Cancel
                         </button>
@@ -461,7 +493,7 @@ export function Taskspace({
                         />
                         <button
                           type="submit"
-                          className="rounded-md px-2 py-0.5 text-[0.68rem] font-bold text-[#5963ae] hover:bg-muted"
+                          className="rounded-md px-2 py-0.5 text-xs font-bold text-[#5963ae] hover:bg-muted"
                         >
                           Add
                         </button>
@@ -469,9 +501,9 @@ export function Taskspace({
                     </form>
                   ) : null}
 
-                  {group.tasks.length > 0 ? (
+                  {visibleTasks.length > 0 ? (
                     <div className="flex flex-col border-t border-[#ebedf4]">
-                      {group.tasks.map((task) => (
+                      {visibleTasks.map((task) => (
                         <TaskRow
                           key={task.id}
                           task={task}
@@ -480,6 +512,9 @@ export function Taskspace({
                           onSelect={setSelectedId}
                           onToggleComplete={toggleComplete}
                           onDelete={canEdit ? deleteTask : undefined}
+                          onMove={canEdit && showCompleted ? (taskId, direction) => moveTask({ ...group, tasks: visibleTasks }, taskId, direction) : undefined}
+                          canMoveUp={visibleTasks.findIndex((item) => item.id === task.id) > 0}
+                          canMoveDown={visibleTasks.findIndex((item) => item.id === task.id) < visibleTasks.length - 1}
                         />
                       ))}
                     </div>
@@ -496,6 +531,8 @@ export function Taskspace({
             })}
           </div>
         )}
+
+        {state.some((group) => group.tasks.some((task) => task.status === "completed")) ? <button type="button" onClick={() => setShowCompleted((value) => !value)} className="mt-6 rounded-md px-1 py-1 text-xs font-bold text-[#5963ae] hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff765d]">{showCompleted ? "Hide completed tasks" : "Show completed tasks"}</button> : null}
 
         {canEdit ? (
           <div className={cn("mt-7", isEmpty && "mt-5")}>
@@ -523,7 +560,7 @@ export function Taskspace({
                 />
                 <button
                   type="submit"
-                  className="rounded-md px-2 py-0.5 text-[0.68rem] font-bold text-[#5963ae] hover:bg-[#dfe3ff] dark:hover:bg-[#ffffff12]"
+                  className="rounded-md px-2 py-0.5 text-xs font-bold text-[#5963ae] hover:bg-[#dfe3ff] dark:hover:bg-[#ffffff12]"
                 >
                   Add section
                 </button>
@@ -554,17 +591,20 @@ export function Taskspace({
         ) : null}
       </div>
 
-      <div className={cn("min-w-0", !selected && "lg:hidden")}>
-        {selected ? (
-          <TaskDetailRecord
+      {isMobile ? <Sheet open={!!selected} onOpenChange={(open) => { if (!open) setSelectedId(null); }}><SheetContent side="bottom" className="max-h-[78vh] overflow-y-auto rounded-t-xl border-border bg-[var(--taskspace-periwinkle-pale)] p-5 shadow-[var(--taskspace-mobile-sheet)]" aria-label="Task detail">{selected ? <TaskDetailRecord
             task={selected.task}
             projectName={projectName}
+            projectId={projectId}
             sectionName={selected.sectionName}
             meUserId={meUserId}
             onDelete={canEdit ? deleteTask : undefined}
-          />
-        ) : null}
-      </div>
+            canEdit={canEdit}
+            availableLabels={labels}
+            members={members}
+            canModerateComments={canModerateComments}
+          /> : null}</SheetContent></Sheet> : <div className={cn("min-w-0", !selected && "lg:hidden")}>
+        {selected ? <TaskDetailRecord task={selected.task} projectName={projectName} projectId={projectId} sectionName={selected.sectionName} meUserId={meUserId} onDelete={canEdit ? deleteTask : undefined} canEdit={canEdit} availableLabels={labels} members={members} canModerateComments={canModerateComments} /> : null}
+      </div>}
     </div>
   );
 }

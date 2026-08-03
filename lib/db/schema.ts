@@ -261,6 +261,12 @@ export const tasks = pgTable(
     projectId: text("project_id").references(() => projects.id, {
       onDelete: "cascade",
     }),
+    // Inbox tasks are private to their creator until moved into a project.
+    // Project tasks may leave this null for backwards compatibility with the
+    // first migration; every new task records its actor.
+    createdBy: text("created_by").references(() => users.id, {
+      onDelete: "set null",
+    }),
     sectionId: text("section_id").references(() => sections.id, {
       onDelete: "set null",
     }),
@@ -296,6 +302,7 @@ export const tasks = pgTable(
       table.position,
     ),
     index("tasks_project_parent_idx").on(table.projectId, table.parentTaskId),
+    index("tasks_inbox_owner_idx").on(table.createdBy, table.projectId),
   ],
 );
 

@@ -5,7 +5,8 @@ import { and, asc, eq, isNull } from "drizzle-orm";
 import { comments, db, tasks, users } from "@/lib/db";
 import { assertPermission, assertProjectAccess, isMemberWithRole } from "./access";
 import { ForbiddenError, NotFoundError, ValidationError } from "./errors";
-import { recordActivity } from "./activity";
+import { recordActivity, recordActivityInTx } from "./activity";
+import { transaction } from "./transaction";
 import type { Actor } from "./types";
 
 export type CommentDTO = {
@@ -63,14 +64,9 @@ export async function addComment(
 
   const id = crypto.randomUUID();
   const now = new Date();
-  await db.insert(comments).values({ id, taskId, authorId: actor.id, body, createdAt: now });
-
-  await recordActivity({
-    projectId,
-    actorId: actor.id,
-    action: "comment_added",
-    taskId,
-    metadata: { commentId: id },
+  await transaction(async (tx) => {
+    await tx.insert(comments).values({ id, taskId, authorId: actor.id, body, createdAt: now });
+    await recordActivityInTx(tx, { projectId, actorId: actor.id, action: "comment_added", taskId, metadata: { commentId: id } });
   });
 
   const [row] = await db.select().from(comments).where(eq(comments.id, id)).limit(1);

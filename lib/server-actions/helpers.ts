@@ -2,6 +2,7 @@ import "server-only";
 
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { AppError, UnauthorizedError } from "@/lib/data-access/errors";
+import { reportActionFailure } from "@/lib/observability";
 import type { Actor } from "@/lib/data-access/types";
 
 import type {
@@ -57,10 +58,13 @@ function toActionError(err: unknown): ActionError {
 export async function toActionResult<T>(
   fn: () => Promise<T>,
 ): Promise<ActionResult<T>> {
+  const traceId = crypto.randomUUID();
+  const startedAt = performance.now();
   try {
     const data = await fn();
     return { ok: true, data };
   } catch (err) {
+    reportActionFailure(err, "server-action", traceId, Math.round(performance.now() - startedAt));
     return { ok: false, error: toActionError(err) };
   }
 }

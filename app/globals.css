@@ -48,6 +48,9 @@
 }
 
 :root {
+  --taskspace-periwinkle-pale: #eef0ff;
+  --taskspace-coral: #ff765d;
+  --taskspace-mobile-sheet: 0 -20px 50px -35px #1c1f4a8c;
   --background: oklch(0.986 0.004 70);
   --foreground: oklch(0.22 0.014 45);
   --card: oklch(0.998 0.002 70);
