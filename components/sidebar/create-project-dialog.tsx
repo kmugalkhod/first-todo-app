@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { createProjectAction } from "@/lib/server-actions/projects";
+import type { ProjectDTO } from "@/lib/data-access";
 import {
   Dialog,
   DialogContent,
@@ -31,9 +32,11 @@ import {
 export function CreateProjectDialog({
   open,
   onOpenChange,
+  onCreated,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onCreated?: (project: ProjectDTO) => void;
 }) {
   const router = useRouter();
   const [name, setName] = React.useState("");
@@ -70,6 +73,9 @@ export function CreateProjectDialog({
     setDescription("");
     setRole("Editor");
     toast.success("Project created");
+    // Optimistically surface the new project in the sidebar immediately
+    // (Task 0201 Recommendation), then reconcile with the server on refresh.
+    onCreated?.(result.data);
     // The dedicated project view arrives in Story 04; for now selecting the new
     // project marks it active in the sidebar and refreshes the shared list.
     router.push(`/?project=${result.data.id}`);
