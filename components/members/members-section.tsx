@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useSearchParams } from "next/navigation";
 import { Settings2, Users } from "lucide-react";
+import { toast } from "sonner";
 
 import type { MemberDTO } from "@/lib/data-access";
 import { listMembersAction } from "@/lib/server-actions/memberships";
@@ -48,6 +49,17 @@ export function MembersSection({ meUserId }: { meUserId: string }) {
     (m) => m.role === "owner" && m.userId === meUserId,
   );
 
+  // Opening always reacts so the control never feels dead: without a selected
+  // project we explain why instead of silently no-opping (previously the button
+  // was disabled, which read as "not working").
+  function openDialog() {
+    if (!projectId) {
+      toast("Select a project first to manage its members.");
+      return;
+    }
+    setDialogOpen(true);
+  }
+
   return (
     <div className="px-2 pb-3">
       <div className="flex items-center justify-between gap-2 px-2">
@@ -57,11 +69,10 @@ export function MembersSection({ meUserId }: { meUserId: string }) {
         </p>
         <button
           type="button"
-          disabled={!projectId}
-          onClick={() => setDialogOpen(true)}
+          onClick={openDialog}
           aria-label="Manage members"
           title={projectId ? "Manage members" : "Select a project to manage members"}
-          className="flex items-center gap-1 rounded-md p-1 text-[0.62rem] font-[700] text-[#c9cdfd] transition-colors hover:bg-white/10 hover:text-white disabled:opacity-50 disabled:hover:bg-transparent"
+          className="flex items-center gap-1 rounded-md p-1 text-[0.62rem] font-[700] text-[#c9cdfd] transition-colors hover:bg-white/10 hover:text-white"
         >
           <Settings2 className="size-3.5" />
           Manage
