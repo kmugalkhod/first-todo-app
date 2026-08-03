@@ -3,9 +3,12 @@
 import {
   changeMemberRole,
   createInvitation,
+  getProject,
   removeMember,
 } from "@/lib/data-access";
 import type { InvitationDTO, MemberDTO } from "@/lib/data-access";
+import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { sendInvitationEmail } from "@/lib/email/invitation";
 
 import { requireActor, toActionResult } from "./helpers";
 import type { ActionResult } from "./types";
@@ -32,8 +35,12 @@ export async function changeMemberRoleAction(
 }
 
 /**
- * Owner creates an invitation (Task 0202). Returns the raw single-use token so
- * Task 0203 can build the emailed/returned link — the token is never stored.
+ * Owner creates an invitation (Task 0202 + 0203) and sends the invitation
+ * email. Returns the raw single-use token so callers can also surface a
+ * fallback accept link — the token is never stored (only its hash is). The
+ * emailed accept link carries the raw token exactly once; the DB is the
+ * authoritative state, so a delivery failure logs a warning but never strands
+ * a valid invitation.
  */
 export async function inviteMemberAction(
   projectId: string,
@@ -41,7 +48,26 @@ export async function inviteMemberAction(
 ): Promise<ActionResult<{ invitation: InvitationDTO; token: string }>> {
   return toActionResult(async () => {
     const actor = await requireActor();
-    return createInvitation(actor, projectId, input);
+    const result = await createInvitation(actor, projectId, input);
+
+    try {
+      const [project, current] = await Promise.all([
+        getProject(actor, projectId),
+        getCurrentUser(),
+      ]);
+      await sendInvitationEmail({
+        to: input.email,
+        url: `/invite/${result.token}`,
+        projectName: project?.name ?? "a project",
+        inviterName: current?.user.displayName || actor.email,
+        role: input.role,
+      });
+    } catch (err) {
+      // Delivery is best-effort; the invitation row + token are already valid.
+      console.error("[invite] Failed to send invitation email", err);
+    }
+
+    return result;
   });
 }
 
