@@ -8,6 +8,13 @@
       "when": 1785739712663,
       "tag": "0000_messy_scorpion",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1785742694665,
+      "tag": "0001_mixed_hedge_knight",
+      "breakpoints": true
     }
   ]
 }
