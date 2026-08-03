@@ -4,7 +4,9 @@ import { and, asc, eq, isNull } from "drizzle-orm";
 
 import {
   db,
+  projectMemberships,
   sections,
+  taskLabels,
   taskPriorityEnum,
   taskStatusEnum,
   tasks,
@@ -16,7 +18,8 @@ import {
   canAccessProject,
 } from "./access";
 import { ForbiddenError, NotFoundError, ValidationError } from "./errors";
-import { recordActivity } from "./activity";
+import { recordActivityInTx } from "./activity";
+import { transaction } from "./transaction";
 import type { Actor } from "./types";
 
 export type TaskPriority = (typeof taskPriorityEnum.enumValues)[number];
@@ -131,28 +134,31 @@ export async function createTask(
   const id = crypto.randomUUID();
   const now = new Date();
 
-  await db.insert(tasks).values({
-    id,
-    projectId,
-    sectionId: input.sectionId ?? null,
-    parentTaskId: input.parentTaskId ?? null,
-    title,
-    description: input.description ?? null,
-    priority: input.priority ?? "p3",
-    assigneeId: input.assigneeId ?? null,
-    scheduledFor: input.scheduledFor ?? null,
-    status: "active",
-    position: input.position ?? 0,
-    createdAt: now,
-    updatedAt: now,
-  });
+  await transaction(async (tx) => {
+    await tx.insert(tasks).values({
+      id,
+      projectId,
+      sectionId: input.sectionId ?? null,
+      parentTaskId: input.parentTaskId ?? null,
+      title,
+      description: input.description ?? null,
+      priority: input.priority ?? "p3",
+      assigneeId: input.assigneeId ?? null,
+      scheduledFor: input.scheduledFor ?? null,
+      status: "active",
+      position: input.position ?? 0,
+      createdAt: now,
+      updatedAt: now,
+    });
 
-  await recordActivity({
-    projectId,
-    actorId: actor.id,
-    action: "task_created",
-    taskId: id,
-    metadata: { title, priority: input.priority ?? "p3" },
+    // The insert and its attributable activity event commit together (principle 7).
+    await recordActivityInTx(tx, {
+      projectId,
+      actorId: actor.id,
+      action: "task_created",
+      taskId: id,
+      metadata: { title, priority: input.priority ?? "p3" },
+    });
   });
 
   const [row] = await db.select().from(tasks).where(eq(tasks.id, id)).limit(1);
@@ -243,15 +249,16 @@ export async function updateTask(
     patch.assigneeId = input.assigneeId ?? null;
   }
 
-  await db.update(tasks).set(patch).where(eq(tasks.id, taskId));
-
   const changed = Object.keys(patch).filter((k) => k !== "updatedAt");
-  await recordActivity({
-    projectId,
-    actorId: actor.id,
-    action: "task_updated",
-    taskId,
-    metadata: { changed },
+  await transaction(async (tx) => {
+    await tx.update(tasks).set(patch).where(eq(tasks.id, taskId));
+    await recordActivityInTx(tx, {
+      projectId,
+      actorId: actor.id,
+      action: "task_updated",
+      taskId,
+      metadata: { changed },
+    });
   });
 
   const [row] = await db.select().from(tasks).where(eq(tasks.id, taskId)).limit(1);
@@ -264,16 +271,18 @@ export async function completeTask(actor: Actor, taskId: string): Promise<TaskDT
   if (task.status === "completed") return toTaskDTO(task);
 
   const now = new Date();
-  await db
-    .update(tasks)
-    .set({ status: "completed", completedAt: now, completedBy: actor.id, updatedAt: now })
-    .where(eq(tasks.id, taskId));
-  await recordActivity({
-    projectId,
-    actorId: actor.id,
-    action: "task_completed",
-    taskId,
-    metadata: { title: task.title },
+  await transaction(async (tx) => {
+    await tx
+      .update(tasks)
+      .set({ status: "completed", completedAt: now, completedBy: actor.id, updatedAt: now })
+      .where(eq(tasks.id, taskId));
+    await recordActivityInTx(tx, {
+      projectId,
+      actorId: actor.id,
+      action: "task_completed",
+      taskId,
+      metadata: { title: task.title },
+    });
   });
 
   const [row] = await db.select().from(tasks).where(eq(tasks.id, taskId)).limit(1);
@@ -286,16 +295,18 @@ export async function reopenTask(actor: Actor, taskId: string): Promise<TaskDTO>
   if (task.status === "active") return toTaskDTO(task);
 
   const now = new Date();
-  await db
-    .update(tasks)
-    .set({ status: "active", completedAt: null, completedBy: null, updatedAt: now })
-    .where(eq(tasks.id, taskId));
-  await recordActivity({
-    projectId,
-    actorId: actor.id,
-    action: "task_reopened",
-    taskId,
-    metadata: { title: task.title },
+  await transaction(async (tx) => {
+    await tx
+      .update(tasks)
+      .set({ status: "active", completedAt: null, completedBy: null, updatedAt: now })
+      .where(eq(tasks.id, taskId));
+    await recordActivityInTx(tx, {
+      projectId,
+      actorId: actor.id,
+      action: "task_reopened",
+      taskId,
+      metadata: { title: task.title },
+    });
   });
 
   const [row] = await db.select().from(tasks).where(eq(tasks.id, taskId)).limit(1);
@@ -313,17 +324,18 @@ export async function assignTask(
   if (assigneeId) await assertActiveMember(projectId, assigneeId);
 
   const now = new Date();
-  await db
-    .update(tasks)
-    .set({ assigneeId, updatedAt: now })
-    .where(eq(tasks.id, taskId));
-
-  await recordActivity({
-    projectId,
-    actorId: actor.id,
-    action: assigneeId ? "task_assigned" : "task_unassigned",
-    taskId,
-    metadata: { assigneeId, title: task.title },
+  await transaction(async (tx) => {
+    await tx
+      .update(tasks)
+      .set({ assigneeId, updatedAt: now })
+      .where(eq(tasks.id, taskId));
+    await recordActivityInTx(tx, {
+      projectId,
+      actorId: actor.id,
+      action: assigneeId ? "task_assigned" : "task_unassigned",
+      taskId,
+      metadata: { assigneeId, title: task.title },
+    });
   });
 
   const [row] = await db.select().from(tasks).where(eq(tasks.id, taskId)).limit(1);
@@ -333,11 +345,168 @@ export async function assignTask(
 /** Delete a task (editor/owner). Sub-tasks are un-parented via set-null FK. */
 export async function deleteTask(actor: Actor, taskId: string): Promise<void> {
   const { task, projectId } = await loadTaskWithPermission(actor, taskId, "task:delete");
-  await db.delete(tasks).where(eq(tasks.id, taskId));
-  await recordActivity({
-    projectId,
-    actorId: actor.id,
-    action: "task_deleted",
-    metadata: { title: task.title },
+  await transaction(async (tx) => {
+    await tx.delete(tasks).where(eq(tasks.id, taskId));
+    // Attribute the deletion to the project it was removed from (taskId is
+    // dropped because the row no longer exists, but the event survives).
+    await recordActivityInTx(tx, {
+      projectId,
+      actorId: actor.id,
+      action: "task_deleted",
+      metadata: { title: task.title },
+    });
   });
+}
+
+/** Load a task row without project-scope restrictions (used for cross-project moves). */
+async function loadAnyTask(taskId: string) {
+  const [task] = await db.select().from(tasks).where(eq(tasks.id, taskId)).limit(1);
+  if (!task) throw new NotFoundError("Task not found.");
+  return task;
+}
+
+/**
+ * Collect every descendant of `taskId` in breadth-first order (parents before
+ * their children) so a subtree can be re-scoped in dependency order.
+ */
+async function collectSubtree(taskId: string): Promise<Array<typeof tasks.$inferSelect>> {
+  const rows: Array<typeof tasks.$inferSelect> = [];
+  const queue: string[] = [taskId];
+  while (queue.length) {
+    const parentId = queue.shift()!;
+    const children = await db.select().from(tasks).where(eq(tasks.parentTaskId, parentId));
+    for (const child of children) {
+      rows.push(child);
+      queue.push(child.id);
+    }
+  }
+  return rows;
+}
+
+/** Non-throwing active-membership check (assignee re-scoping on cross-project moves). */
+async function isActiveMember(projectId: string, userId: string): Promise<boolean> {
+  const [m] = await db
+    .select()
+    .from(projectMemberships)
+    .where(
+      and(
+        eq(projectMemberships.projectId, projectId),
+        eq(projectMemberships.userId, userId),
+        eq(projectMemberships.status, "active"),
+      ),
+    )
+    .limit(1);
+  return !!m;
+}
+
+/**
+ * Move a task between projects — or into the Inbox (`projectId = null`, FR-3).
+ *
+ * Moving into a project checks the actor's role **in that destination project**
+ * (FR-3: "moving one to a project checks the actor's project role"); moving out
+ * of a project also requires `task:write` in the source. Project-scoped fields
+ * (section, parent, assignee) are re-scoped or cleared so a task never reaches a
+ * project through a section/parent/assignee from another project (FR-4/§7
+ * non-negotiables), and the whole sub-task subtree moves together so every
+ * descendant stays in the same project as its parent (FR-4). A sub-task that
+ * still has a parent cannot change project — that would split it from its
+ * parent (re-parenting within a project is handled by `updateTask`).
+ * Persisted atomically (the move + re-scopes + activity event all commit or
+ * roll back together — principle 7).
+ */
+export async function moveTaskToProject(
+  actor: Actor,
+  taskId: string,
+  destinationProjectId: string | null,
+): Promise<TaskDTO> {
+  const task = await loadAnyTask(taskId);
+  const sourceProjectId = task.projectId;
+
+  // FR-4: a sub-task must stay in its parent's project. Moveable tasks are
+  // roots — they have no parent that would be left behind in another project.
+  if (task.parentTaskId && destinationProjectId !== sourceProjectId) {
+    throw new ValidationError("A sub-task must stay in the same project as its parent.");
+  }
+
+  // Destination-role check is the FR-3 requirement; also guard the source so a
+  // task can't be yanked out of a project the actor can't write.
+  if (destinationProjectId) {
+    await assertPermission(actor, destinationProjectId, "task:write");
+  }
+  if (sourceProjectId && sourceProjectId !== destinationProjectId) {
+    await assertPermission(actor, sourceProjectId, "task:write");
+  }
+
+  // Same-project is not a project move; nothing to change.
+  if (sourceProjectId === destinationProjectId) {
+    const [row] = await db.select().from(tasks).where(eq(tasks.id, taskId)).limit(1);
+    return toTaskDTO(row);
+  }
+
+  // Descendants follow the root so the whole subtree stays in one project.
+  const subtree = await collectSubtree(taskId);
+  const now = new Date();
+
+  // Re-scope an assignee only when they are an active member of the destination
+  // (assignment never implies membership — principle 8). Inbox tasks can never
+  // carry an assignee, and project-scoped assignees never cross projects.
+  const keepAssignee = async (assigneeId: string | null): Promise<boolean> =>
+    !!destinationProjectId &&
+    !!assigneeId &&
+    (await isActiveMember(destinationProjectId, assigneeId));
+
+  await transaction(async (tx) => {
+    // Labels are project-scoped (FR-4/§7) — they never cross projects, so detach
+    // them for the root and every descendant on a cross-project move.
+    await tx.delete(taskLabels).where(eq(taskLabels.taskId, taskId));
+    for (const child of subtree) {
+      await tx.delete(taskLabels).where(eq(taskLabels.taskId, child.id));
+    }
+
+    // Root first, then children — each is its own statement, so a child's row
+    // trigger sees its (already moved) parent in the new project.
+    await tx
+      .update(tasks)
+      .set({
+        projectId: destinationProjectId,
+        sectionId: null,
+        parentTaskId: null,
+        assigneeId: (await keepAssignee(task.assigneeId)) ? task.assigneeId : null,
+        updatedAt: now,
+      })
+      .where(eq(tasks.id, taskId));
+
+    for (const child of subtree) {
+      await tx
+        .update(tasks)
+        .set({
+          projectId: destinationProjectId,
+          sectionId: null,
+          assigneeId: (await keepAssignee(child.assigneeId)) ? child.assigneeId : null,
+          updatedAt: now,
+        })
+        .where(eq(tasks.id, child.id));
+    }
+
+    // Attribute the change to the project it happened in (destination, else source
+    // when yielding a task to the Inbox).
+    const activityProjectId = destinationProjectId ?? sourceProjectId;
+    if (activityProjectId) {
+      await recordActivityInTx(tx, {
+        projectId: activityProjectId,
+        actorId: actor.id,
+        action: "task_updated",
+        taskId,
+        metadata: {
+          title: task.title,
+          movedFromProjectId: sourceProjectId,
+          movedToProjectId: destinationProjectId,
+          migratedSubtaskCount: subtree.length,
+        },
+      });
+    }
+  });
+
+  const [row] = await db.select().from(tasks).where(eq(tasks.id, taskId)).limit(1);
+  return toTaskDTO(row);
 }
