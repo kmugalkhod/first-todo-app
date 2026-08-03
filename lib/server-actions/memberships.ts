@@ -2,9 +2,10 @@
 
 import {
   changeMemberRole,
+  createInvitation,
   removeMember,
 } from "@/lib/data-access";
-import type { MemberDTO } from "@/lib/data-access";
+import type { InvitationDTO, MemberDTO } from "@/lib/data-access";
 
 import { requireActor, toActionResult } from "./helpers";
 import type { ActionResult } from "./types";
@@ -27,6 +28,20 @@ export async function changeMemberRoleAction(
   return toActionResult(async () => {
     const actor = await requireActor();
     return changeMemberRole(actor, projectId, memberUserId, newRole);
+  });
+}
+
+/**
+ * Owner creates an invitation (Task 0202). Returns the raw single-use token so
+ * Task 0203 can build the emailed/returned link — the token is never stored.
+ */
+export async function inviteMemberAction(
+  projectId: string,
+  input: { email: string; role: "editor" | "viewer" },
+): Promise<ActionResult<{ invitation: InvitationDTO; token: string }>> {
+  return toActionResult(async () => {
+    const actor = await requireActor();
+    return createInvitation(actor, projectId, input);
   });
 }
 
