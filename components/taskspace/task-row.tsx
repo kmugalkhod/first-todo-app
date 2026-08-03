@@ -49,7 +49,7 @@ export function TaskRow({
     <article
       className={cn(
         surface,
-        "transition-colors",
+        "transition-colors hover:bg-[#f7f8ff]",
         selected && "rounded-[10px] border-b-transparent bg-[#f7f8ff]",
       )}
     >
