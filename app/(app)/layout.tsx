@@ -1,7 +1,9 @@
 import { redirect } from "next/navigation";
 
 import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { listProjectsForActor, type ProjectDTO } from "@/lib/data-access";
 import { AppSidebar } from "@/components/sidebar/app-sidebar";
+import { ProjectNav } from "@/components/sidebar/project-nav";
 import { ModeToggle } from "@/feature/components/toggle";
 import {
   SidebarInset,
@@ -15,6 +17,13 @@ import {
  * and renders inside the shared Taskspace application shell — the cobalt
  * sidebar, action topbar and paper workspace persist across all protected
  * pages so navigation never tears down the frame.
+ *
+ * The sidebar's project list is fetched server-side here via
+ * `listProjectsForActor` and passed into the shared ProjectNav so it stays
+ * consistent app-wide. It is resolved before rendering (no Suspense boundary
+ * around ProjectNav) so the client keeps its state across `router.refresh()`
+ * — this is what lets a freshly created project stay visible immediately via
+ * the optimistic update in ProjectNav.
  */
 export default async function ProtectedLayout({
   children,
@@ -29,9 +38,20 @@ export default async function ProtectedLayout({
 
   const { user } = currentUser;
 
+  let projects: ProjectDTO[] | null = null;
+  let error: string | null = null;
+
+  try {
+    projects = await listProjectsForActor({ id: user.id, email: user.email });
+  } catch {
+    error = "Couldn't load your projects. Please try again.";
+  }
+
   return (
     <SidebarProvider>
-      <AppSidebar user={user} />
+      <AppSidebar user={user}>
+        <ProjectNav projects={projects} error={error} />
+      </AppSidebar>
       <SidebarInset className="min-h-svh bg-background">
         <header className="flex h-16 shrink-0 items-center justify-between border-b border-border/80 bg-background/95 px-4 sm:px-6">
           <div className="flex items-center gap-3">

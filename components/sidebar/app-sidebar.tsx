@@ -116,7 +116,13 @@ function UserMenu({ user }: { user: User }) {
   );
 }
 
-export function AppSidebar({ user }: { user: User }) {
+export function AppSidebar({
+  user,
+  children,
+}: {
+  user: User;
+  children: React.ReactNode;
+}) {
   return (
     <Sidebar className="border-r border-white/10" collapsible="offcanvas">
       <SidebarHeader className="px-4 pb-3 pt-5">
@@ -173,16 +179,7 @@ export function AppSidebar({ user }: { user: User }) {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        <SidebarGroup className="pb-4 pt-6">
-          <SidebarGroupLabel className="px-2 text-[0.62rem] font-[750] uppercase tracking-[0.08em] text-[#c9cdfd]">
-            Projects
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <p className="px-3 pt-1 text-xs leading-5 text-[#c9cdfd]/75">
-              Create a project to bring teammates together.
-            </p>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {children}
       </SidebarContent>
 
       <SidebarFooter className="px-3 pb-4">
