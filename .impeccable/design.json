@@ -1,0 +1,102 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-02T09:27:31Z",
+  "title": "Design System: Taskspace",
+  "extensions": {
+    "colorMeta": {
+      "ink": { "role": "neutral", "displayName": "Taskspace Ink", "canonical": "#202550", "tonalRamp": ["#151836", "#202550", "#353b6e", "#515989", "#6e76a3", "#9299bb", "#bbc0d2", "#eef0f7"] },
+      "muted": { "role": "neutral", "displayName": "Muted Blueprint", "canonical": "#69718d", "tonalRamp": ["#252938", "#3f4659", "#5a6279", "#69718d", "#858da5", "#a4abc0", "#c7cad9", "#f0f1f6"] },
+      "cobalt": { "role": "primary", "displayName": "Workboard Cobalt", "canonical": "#3543d6", "tonalRamp": ["#171a5b", "#252d95", "#3543d6", "#5965e0", "#7a85e8", "#a2aaef", "#cbd0f6", "#f0f1ff"] },
+      "cobalt-deep": { "role": "primary", "displayName": "Deep Cobalt", "canonical": "#252d95", "tonalRamp": ["#111343", "#1a206a", "#252d95", "#4954b1", "#6a73c7", "#9299da", "#c3c7ea", "#f0f1ff"] },
+      "periwinkle-pale": { "role": "neutral", "displayName": "Periwinkle Wash", "canonical": "#eef0ff", "tonalRamp": ["#1f2456", "#3d478b", "#626eb8", "#929ad4", "#bfc4e8", "#dce0f4", "#eef0ff", "#fafaff"] },
+      "paper": { "role": "neutral", "displayName": "Paper White", "canonical": "#fbfbff", "tonalRamp": ["#343547", "#5b5c70", "#85869b", "#adaec0", "#d2d3df", "#e9e9f0", "#fbfbff", "#ffffff"] },
+      "canvas": { "role": "neutral", "displayName": "Cool Canvas", "canonical": "#e1e4ff", "tonalRamp": ["#252851", "#444a7d", "#6870aa", "#939bd0", "#bec3ea", "#d8dbf7", "#e1e4ff", "#f7f8ff"] },
+      "line": { "role": "neutral", "displayName": "Fine Divider", "canonical": "#dfe2ef", "tonalRamp": ["#2b2e4d", "#4d5277", "#73799f", "#a1a7c4", "#c3c7da", "#dfe2ef", "#eff0f7", "#fafaff"] },
+      "citron": { "role": "secondary", "displayName": "Ownership Citron", "canonical": "#edff81", "tonalRamp": ["#384000", "#657000", "#98a600", "#cbd93d", "#edff81", "#f3ffad", "#f8ffd1", "#fdffed"] },
+      "coral": { "role": "tertiary", "displayName": "Attention Coral", "canonical": "#ff765d", "tonalRamp": ["#54180f", "#8c2f22", "#bd4e3c", "#e86651", "#ff765d", "#ffab9c", "#ffd1c8", "#fff0ed"] },
+      "completion-green": { "role": "tertiary", "displayName": "Completion Green", "canonical": "#3b8b69", "tonalRamp": ["#113329", "#1d5843", "#2c7358", "#3b8b69", "#67aa8d", "#96c8b2", "#c5e2d3", "#edf8f2"] }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Project Display", "purpose": "Orienting project names and primary page headings." },
+      "title": { "displayName": "Record Title", "purpose": "Selected task titles in the live detail record." },
+      "body": { "displayName": "Operational Body", "purpose": "Descriptions, comments, and readable task context." },
+      "label": { "displayName": "System Label", "purpose": "Small navigation groups and section kickers." }
+    },
+    "shadows": [
+      { "name": "application-shell", "value": "0 30px 70px -44px #191c5366", "purpose": "Frames the desktop application over the cool canvas." },
+      { "name": "floating-dialog", "value": "0 30px 70px -38px #161946b3", "purpose": "Separates the project creation dialog from the modal overlay." },
+      { "name": "toast", "value": "0 18px 42px -24px #191b4585", "purpose": "Lifts transient feedback above the workspace." },
+      { "name": "mobile-sheet", "value": "0 -20px 50px -35px #1c1f4a8c", "purpose": "Defines the task-detail sheet on small screens." }
+    ],
+    "motion": [
+      { "name": "toast-enter", "value": "opacity .18s ease, transform .18s ease", "purpose": "The toast rises 12px into view and fades in." }
+    ],
+    "breakpoints": [
+      { "name": "compact-desktop", "value": "1050px" },
+      { "name": "tablet", "value": "800px" },
+      { "name": "mobile", "value": "620px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Action",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Use for creating or confirming a shared-work action.",
+      "html": "<button class=\"ds-btn-primary\">New task</button>",
+      "css": ".ds-btn-primary{height:35px;padding:0 12px;border:0;border-radius:8px;background:#3543d6;color:#fff;font-family:Aptos,\"Segoe UI Variable\",ui-sans-serif,system-ui,sans-serif;font-size:.72rem;font-weight:790;cursor:pointer}.ds-btn-primary:hover{background:#4c58df}.ds-btn-primary:focus-visible{outline:3px solid #ff765d;outline-offset:3px}.ds-btn-primary:active{background:#252d95}"
+    },
+    {
+      "name": "Search Field",
+      "kind": "input",
+      "refersTo": "input-search",
+      "description": "Compact topbar search for tasks and projects.",
+      "html": "<label class=\"ds-search-wrap\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><circle cx=\"10.5\" cy=\"10.5\" r=\"5.5\"></circle><path d=\"m15 15 4 4\"></path></svg><input class=\"ds-search\" placeholder=\"Search tasks and projects\"></label>",
+      "css": ".ds-search-wrap{position:relative;display:block;width:260px}.ds-search-wrap svg{position:absolute;top:10px;left:10px;width:14px;height:14px;fill:none;stroke:#858ba6;stroke-width:2;pointer-events:none}.ds-search{width:100%;height:35px;padding:0 11px 0 32px;border:1px solid #dfe2ef;border-radius:8px;background:#fbfbff;color:#202550;font-family:Aptos,\"Segoe UI Variable\",ui-sans-serif,system-ui,sans-serif;font-size:.73rem}.ds-search:focus-visible{outline:3px solid #ff765d;outline-offset:3px}"
+    },
+    {
+      "name": "Cobalt Sidebar Navigation",
+      "kind": "nav",
+      "description": "Workspace navigation with compact rows and a translucent active state.",
+      "html": "<nav class=\"ds-nav\" aria-label=\"Workspace\"><span class=\"ds-nav-label\">YOUR WORK</span><button class=\"ds-nav-item ds-active\">⌂ Inbox <b>2</b></button><button class=\"ds-nav-item\">◷ Today <b>5</b></button><span class=\"ds-nav-label\">PROJECTS</span><button class=\"ds-nav-item\"><i></i> Website relaunch</button></nav>",
+      "css": ".ds-nav{display:grid;gap:2px;width:220px;padding:14px;background:#3543d6;color:#e1e3ff;font-family:Aptos,\"Segoe UI Variable\",ui-sans-serif,system-ui,sans-serif}.ds-nav-label{margin:10px 10px 5px;color:#c9cdfd;font-size:.62rem;font-weight:760;letter-spacing:.08em}.ds-nav-item{display:flex;align-items:center;gap:9px;min-height:34px;padding:0 10px;border:0;border-radius:8px;background:transparent;color:#e1e3ff;font:650 .74rem inherit;text-align:left;cursor:pointer}.ds-nav-item b{margin-left:auto;color:#c9cdfd;font-size:.66rem}.ds-nav-item i{width:9px;height:9px;border-radius:3px;background:#edff81;transform:rotate(45deg)}.ds-nav-item:hover,.ds-nav-item.ds-active{background:#ffffff26}.ds-nav-item:focus-visible{outline:3px solid #ff765d;outline-offset:3px}"
+    },
+    {
+      "name": "Priority Pill",
+      "kind": "chip",
+      "refersTo": "pill-priority",
+      "description": "Compact semantic priority label used inside scan-first task rows.",
+      "html": "<span class=\"ds-pill\">P3</span>",
+      "css": ".ds-pill{display:inline-flex;align-items:center;height:20px;padding:0 6px;border-radius:5px;background:#eef0ff;color:#5963ae;font-family:Aptos,\"Segoe UI Variable\",ui-sans-serif,system-ui,sans-serif;font-size:.59rem;font-weight:800;white-space:nowrap}"
+    },
+    {
+      "name": "Selected Task Row",
+      "kind": "card",
+      "refersTo": "task-row-selected",
+      "description": "The structured list row that preserves ownership and timing while a task is open.",
+      "html": "<article class=\"ds-task\"><button class=\"ds-check\" aria-label=\"Complete task\"></button><div class=\"ds-copy\"><strong>Approve the final launch checklist</strong><small>0/3 subtasks</small></div><span class=\"ds-pill\">P1</span><time>Today, 3:00 PM</time><span class=\"ds-avatar\">M</span></article>",
+      "css": ".ds-task{display:grid;grid-template-columns:21px minmax(120px,1fr) auto auto 23px;gap:12px;align-items:center;min-height:58px;padding:0 10px;border-radius:10px;background:#f7f8ff;color:#202550;font-family:Aptos,\"Segoe UI Variable\",ui-sans-serif,system-ui,sans-serif}.ds-check{width:19px;height:19px;padding:0;border:2px solid #aab0c4;border-radius:50%;background:transparent;cursor:pointer}.ds-check:hover{border-color:#3543d6}.ds-check:focus-visible{outline:3px solid #ff765d;outline-offset:3px}.ds-copy{min-width:0}.ds-copy strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.78rem;letter-spacing:-.015em}.ds-copy small{display:block;margin-top:3px;color:#8990a7;font-size:.65rem}.ds-pill{display:inline-flex;align-items:center;height:20px;padding:0 6px;border-radius:5px;background:#fff0ed;color:#b74c3a;font-size:.59rem;font-weight:800}.ds-task time{color:#67718e;font-size:.64rem;font-weight:740;white-space:nowrap}.ds-avatar{display:grid;place-items:center;width:23px;height:23px;border-radius:50%;background:#edff81;color:#252d95;font-size:.55rem;font-weight:850}"
+    },
+    {
+      "name": "Task Detail Surface",
+      "kind": "custom",
+      "description": "Live adjacent task record that carries task context without replacing the list.",
+      "html": "<aside class=\"ds-detail\"><span class=\"ds-kicker\">WEBSITE RELAUNCH / LAUNCH PLAN</span><h2>Approve the final launch checklist</h2><p>Confirm every owner, hand-off and planned date before the team starts publishing.</p><dl><dt>Assignee</dt><dd><b>M</b> Maya</dd><dt>Planned</dt><dd>Today, 3:00 PM</dd></dl></aside>",
+      "css": ".ds-detail{width:320px;padding:22px 23px 35px;border-left:1px solid #dfe2ef;background:#f5f6ff;color:#202550;font-family:Aptos,\"Segoe UI Variable\",ui-sans-serif,system-ui,sans-serif}.ds-kicker{color:#6671b9;font-size:.62rem;font-weight:820;letter-spacing:.07em}.ds-detail h2{margin:18px 0 0;font-family:ArchivoDisplay,Aptos,\"Segoe UI Variable\",sans-serif;font-size:1.45rem;line-height:1.06;letter-spacing:-.048em}.ds-detail p{margin:10px 0 0;color:#666f8b;font-size:.75rem;line-height:1.55}.ds-detail dl{display:grid;grid-template-columns:84px 1fr;gap:8px;margin:20px 0 0;padding:14px 0;border-top:1px solid #dfe2f1;border-bottom:1px solid #dfe2f1;color:#38405f;font-size:.67rem;font-weight:730}.ds-detail dt{color:#8a91a9}.ds-detail dd{display:flex;gap:6px;align-items:center;margin:0}.ds-detail dd b{display:grid;place-items:center;width:21px;height:21px;border-radius:50%;background:#edff81;color:#252d95;font-size:.55rem}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Shared Workboard",
+    "overview": "Taskspace makes shared commitments feel immediate and orderly. A saturated cobalt navigation field holds identity, destinations, and people; the paper-white work canvas carries the structured project list; a live task record stays alongside it rather than replacing it. The resulting interface is compact, practical, and unmistakably collaborative—not a personal-focus dashboard.\n\nThe palette reserves its sharpest signals for meaning: citron identifies ownership and project markers, coral calls out attention and activity, and green confirms completion. Strong display typography makes the current project or task unmistakable, while the smaller Aptos system stays calm enough for dense metadata and shared context.",
+    "keyCharacteristics": ["Cobalt navigation against a pale paper workspace.", "Structured list and open record shown in the same working frame.", "High-information task rows with quiet borders and selective color.", "Geometric diamond marks, circular people, and gently rounded utility controls."],
+    "rules": [
+      { "name": "The Signal Colors Rule", "body": "Citron, coral, and green communicate ownership, attention, and completion respectively. Do not use them as interchangeable decorative accents.", "section": "colors" },
+      { "name": "The Big Name, Small System Rule", "body": "Save ArchivoDisplay for names that orient the work. All operational detail remains in the system sans.", "section": "typography" },
+      { "name": "The Coexisting Context Rule", "body": "On wide screens, preserve the task list and selected record side by side. Do not make the record a route or modal when both can coexist.", "section": "layout" },
+      { "name": "The Flat-Until-Floating Rule", "body": "Ordinary sections, rows, and controls use borders and soft surface changes, not elevation.", "section": "elevation" }
+    ],
+    "dos": ["Do use cobalt for navigation and primary advancement, with paper surfaces for the day-to-day work.", "Do keep owner, planned date, priority, label, and section context visible in the task list or selected record.", "Do pair a structured list with its selected detail record on wide screens.", "Do reserve citron for people and ownership signals, coral for attention, and green for completion.", "Do use thin dividers and pale selection surfaces to organize dense information."],
+    "donts": ["Don't turn every task row or section into a raised card.", "Don't hide task context behind a personal-focus queue or replace the selected record with a full-screen detour on desktop.", "Don't treat coral, citron, and green as interchangeable decoration.", "Don't use the display face for dense metadata, controls, or body copy."]
+  }
+}
+

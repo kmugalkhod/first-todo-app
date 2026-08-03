@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Task Product — Build Roadmap Review</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script type="module">
+      import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+      mermaid.initialize({ startOnLoad: true, theme: "base", themeVariables: { primaryColor: "#fff0ea", primaryTextColor: "#382d26", primaryBorderColor: "#e48163", lineColor: "#9c8479", secondaryColor: "#fff8f4", tertiaryColor: "#f8eee8" } });
+    </script>
+    <style type="text/tailwindcss">
+      @theme { --color-ink: #382d26; --color-paper: #fdfaf7; --color-panel: #fffefd; --color-line: #e9ddd6; --color-muted: #74665e; --color-accent: #bd4b2f; --color-tint: #fff0ea; }
+      @layer base { body { @apply bg-paper text-ink antialiased; } }
+    </style>
+  </head>
+  <body>
+    <main class="mx-auto max-w-6xl px-5 py-10 sm:px-8 lg:py-16">
+      <header class="max-w-3xl">
+        <p class="text-sm font-semibold tracking-[.18em] text-accent uppercase">Product review · 2 August 2026</p>
+        <h1 class="mt-3 text-4xl font-semibold tracking-[-.04em] sm:text-5xl">Build a focused task product first.</h1>
+        <p class="mt-5 text-lg leading-8 text-muted">The research describes a complete Todoist-like ecosystem. Our first release should recreate its durable core: fast capture, a reliable task model, useful daily views, and a calm interface. Collaboration, paid entitlements, external sync, AI, desktop/mobile clients, and automation follow only after that foundation works.</p>
+      </header>
+
+      <section class="mt-12 grid gap-5 md:grid-cols-3" aria-label="Scope recommendation">
+        <article class="rounded-2xl border border-accent bg-tint p-6 shadow-sm">
+          <p class="text-sm font-semibold text-accent">Build now — MVP</p>
+          <h2 class="mt-2 text-xl font-semibold">Personal task management</h2>
+          <p class="mt-3 leading-6 text-muted">Inbox, Today, projects, sections, tasks and sub-tasks; priority, labels, scheduling, search, keyboard-first capture and a list view.</p>
+        </article>
+        <article class="rounded-2xl border border-line bg-panel p-6">
+          <p class="text-sm font-semibold text-muted">Build next</p>
+          <h2 class="mt-2 text-xl font-semibold">Planning &amp; collaboration</h2>
+          <p class="mt-3 leading-6 text-muted">Recurring rules, filters, board view, task detail, comments, sharing, assignments, reminders and activity history.</p>
+        </article>
+        <article class="rounded-2xl border border-line bg-panel p-6">
+          <p class="text-sm font-semibold text-muted">Deliberately defer</p>
+          <h2 class="mt-2 text-xl font-semibold">Platform &amp; ecosystem</h2>
+          <p class="mt-3 leading-6 text-muted">Calendar OAuth/sync, notifications, AI, automation/webhooks, billing, teams, audit/security controls, native apps and extensions.</p>
+        </article>
+      </section>
+
+      <section class="mt-14">
+        <div class="max-w-3xl">
+          <p class="text-sm font-semibold tracking-[.14em] text-accent uppercase">Architecture sequence</p>
+          <h2 class="mt-2 text-3xl font-semibold tracking-[-.03em]">What must exist before a feature is useful</h2>
+        </div>
+        <div class="mt-6 overflow-x-auto rounded-2xl border border-line bg-panel p-5 sm:p-8">
+          <pre class="mermaid min-w-[760px]">
+flowchart LR
+  A[0. Product decisions] --> B[1. App foundation]
+  B --> C[2. Core data model]
+  C --> D[3. Capture & task CRUD]
+  D --> E[4. Daily planning views]
+  E --> F[5. Organisation & discovery]
+  F --> G[6. Reliability & accessibility]
+  G --> H[7. Collaboration]
+  H --> I[8. Integrations & premium layers]
+          </pre>
+        </div>
+      </section>
+
+      <section class="mt-14">
+        <p class="text-sm font-semibold tracking-[.14em] text-accent uppercase">Implementation plan</p>
+        <h2 class="mt-2 text-3xl font-semibold tracking-[-.03em]">Eight small, shippable phases</h2>
+        <div class="mt-7 overflow-x-auto rounded-2xl border border-line bg-panel">
+          <table class="w-full min-w-[850px] text-left text-sm">
+            <thead class="border-b border-line bg-[#fffaf7] text-muted">
+              <tr><th class="px-5 py-4 font-semibold">Phase</th><th class="px-5 py-4 font-semibold">Outcome</th><th class="px-5 py-4 font-semibold">Includes</th><th class="px-5 py-4 font-semibold">Exit check</th></tr>
+            </thead>
+            <tbody class="divide-y divide-line">
+              <tr><td class="px-5 py-5 font-semibold text-accent">0 · Define</td><td class="px-5 py-5">A constrained product contract.</td><td class="px-5 py-5">Audience, MVP boundary, web-only decision, initial plan/role policy, success metrics.</td><td class="px-5 py-5">A one-page acceptance list exists.</td></tr>
+              <tr><td class="px-5 py-5 font-semibold text-accent">1 · Foundation</td><td class="px-5 py-5">A production-shaped web shell.</td><td class="px-5 py-5">Next 16 conventions, TypeScript, linting, responsive layout, theme, error/empty/loading states.</td><td class="px-5 py-5">App is navigable on phone and desktop.</td></tr>
+              <tr><td class="px-5 py-5 font-semibold text-accent">2 · Data</td><td class="px-5 py-5">A stable task domain model.</td><td class="px-5 py-5">User, project, section, task, parent task, label, task-label; status, priority, schedule, timestamps.</td><td class="px-5 py-5">Migrations and ownership rules are tested.</td></tr>
+              <tr><td class="px-5 py-5 font-semibold text-accent">3 · Core tasks</td><td class="px-5 py-5">Capture to completion works end-to-end.</td><td class="px-5 py-5">Inbox, add/edit/complete/delete, task detail, project &amp; section selection, priorities, labels, sub-tasks.</td><td class="px-5 py-5">A user can manage real work without mock data.</td></tr>
+              <tr><td class="px-5 py-5 font-semibold text-accent">4 · Plan today</td><td class="px-5 py-5">The app earns daily use.</td><td class="px-5 py-5">Today, Upcoming, date/time picker, overdue state, manual ordering, responsive task interactions.</td><td class="px-5 py-5">Today accurately reflects task state across dates.</td></tr>
+              <tr><td class="px-5 py-5 font-semibold text-accent">5 · Organise</td><td class="px-5 py-5">People can retrieve work quickly.</td><td class="px-5 py-5">Projects sidebar, favourites, search, saved filters, list grouping/sorting; then board layout.</td><td class="px-5 py-5">Key task retrieval flows have E2E coverage.</td></tr>
+              <tr><td class="px-5 py-5 font-semibold text-accent">6 · Harden</td><td class="px-5 py-5">The MVP is trustworthy.</td><td class="px-5 py-5">Optimistic updates, retry/error recovery, timezone rules, keyboard shortcuts, accessibility, performance and privacy basics.</td><td class="px-5 py-5">Core flows are accessible, resilient and monitored.</td></tr>
+              <tr><td class="px-5 py-5 font-semibold text-accent">7–8 · Expand</td><td class="px-5 py-5">Add complexity based on evidence.</td><td class="px-5 py-5">Recurring tasks → comments/sharing → calendar → reminders → teams → templates/history → integrations/AI.</td><td class="px-5 py-5">Each layer has a validated demand and operational owner.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="mt-14 grid gap-6 lg:grid-cols-2">
+        <article class="rounded-2xl border border-line bg-panel p-6">
+          <p class="text-sm font-semibold tracking-[.14em] text-accent uppercase">Non-negotiable modelling choices</p>
+          <ul class="mt-5 space-y-4 leading-6 text-muted">
+            <li><strong class="text-ink">Date ≠ deadline.</strong> A scheduled work date and a hard finish boundary are separate fields; defer deadline until a paid-tier model exists if plans are required.</li>
+            <li><strong class="text-ink">Duration ≠ time tracking.</strong> Expected effort supports later calendar blocking; it must not imply a running timer.</li>
+            <li><strong class="text-ink">One assignee.</strong> If collaboration arrives, retain clear ownership and use sub-tasks for joint work.</li>
+            <li><strong class="text-ink">Recurrence is a rule, not copied tasks.</strong> Design it only after completion semantics and time zones are stable.</li>
+            <li><strong class="text-ink">Projects own tasks.</strong> Sections organise project work; labels cut across projects; parent/child tasks remain in one project.</li>
+          </ul>
+        </article>
+        <article class="rounded-2xl border border-line bg-panel p-6">
+          <p class="text-sm font-semibold tracking-[.14em] text-accent uppercase">Scope guardrails</p>
+          <ul class="mt-5 space-y-4 leading-6 text-muted">
+            <li>Do not copy Todoist’s subscriptions, brand, screenshots, proprietary parser, or integrations; use the report as a capability reference.</li>
+            <li>Do not build teams, billing or roles until personal task CRUD is persisted and observed in real use.</li>
+            <li>Do not promise offline sync, OAuth calendar sync, push reminders, AI extraction or webhooks without their operational infrastructure.</li>
+            <li>Mobile web is a responsive companion for this project; native widgets, extensions and desktop global shortcuts are separate products.</li>
+            <li>Confirm plan entitlements only when monetisation becomes in scope; the report identifies inconsistencies in external pricing documentation.</li>
+          </ul>
+        </article>
+      </section>
+
+      <section class="mt-14 rounded-2xl border border-accent/30 bg-tint p-6 sm:p-8">
+        <p class="text-sm font-semibold tracking-[.14em] text-accent uppercase">Decision needed before Phase 1</p>
+        <h2 class="mt-2 text-2xl font-semibold">Choose the first release target</h2>
+        <p class="mt-3 max-w-3xl leading-7 text-muted">My recommendation: a single-user, authenticated, responsive web application with persistent data. It gives us a real product path without prematurely modelling collaboration or paid plans.</p>
+        <form class="mt-6 grid gap-4 sm:grid-cols-3" aria-label="MVP scope preference">
+          <label class="rounded-xl border border-accent bg-panel p-4"><input type="radio" name="scope" checked /> <span class="ml-2 font-semibold">Recommended</span><span class="mt-2 block text-sm text-muted">Single user + persistence</span></label>
+          <label class="rounded-xl border border-line bg-panel p-4"><input type="radio" name="scope" /> <span class="ml-2 font-semibold">Prototype</span><span class="mt-2 block text-sm text-muted">Polish current local-only app</span></label>
+          <label class="rounded-xl border border-line bg-panel p-4"><input type="radio" name="scope" /> <span class="ml-2 font-semibold">Shared MVP</span><span class="mt-2 block text-sm text-muted">Users, projects, basic collaboration</span></label>
+        </form>
+      </section>
+
+      <footer class="mt-10 text-sm text-muted">Review basis: <code class="rounded bg-[#f5ece7] px-1.5 py-0.5">context/deep-research-report.md</code>. This artifact uses the existing app’s warm neutral/orange design language.</footer>
+    </main>
+  </body>
+</html>
