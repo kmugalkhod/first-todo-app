@@ -1,6 +1,13 @@
 "use client";
 
-import { CalendarDays, CheckCircle2, Circle, Tag, User } from "lucide-react";
+import {
+  CalendarDays,
+  CheckCircle2,
+  Circle,
+  Tag,
+  Trash2,
+  User,
+} from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import {
@@ -25,11 +32,14 @@ export function TaskDetailRecord({
   projectName,
   sectionName,
   meUserId,
+  onDelete,
 }: {
   task: TaskRowData;
   projectName: string;
   sectionName: string | null;
   meUserId?: string | null;
+  /** Deletes the task; renders the destructive delete action when provided. */
+  onDelete?: (taskId: string) => void;
 }) {
   const completed = task.status === "completed";
   const isOwnedByMe = task.owner?.id != null && task.owner.id === meUserId;
@@ -141,6 +151,17 @@ export function TaskDetailRecord({
           </div>
         ) : null}
       </dl>
+
+      {onDelete ? (
+        <button
+          type="button"
+          onClick={() => onDelete(task.id)}
+          className="mt-auto inline-flex items-center gap-1.5 justify-self-start rounded-md px-2 py-1 text-[0.7rem] font-bold text-[#bd503b] transition-colors hover:bg-[#ff765d]/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff765d] focus-visible:ring-offset-1 dark:text-[#ff8a72]"
+        >
+          <Trash2 className="size-3.5" />
+          Delete task
+        </button>
+      ) : null}
     </aside>
   );
 }

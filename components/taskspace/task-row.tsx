@@ -1,6 +1,6 @@
 "use client";
 
-import { Check } from "lucide-react";
+import { Check, Trash2 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import {
@@ -30,6 +30,7 @@ export function TaskRow({
   meUserId,
   onSelect,
   onToggleComplete,
+  onDelete,
 }: {
   task: TaskRowData;
   selected: boolean;
@@ -37,13 +38,15 @@ export function TaskRow({
   meUserId?: string | null;
   onSelect: (taskId: string) => void;
   onToggleComplete: (taskId: string, complete: boolean) => void;
+  /** Deletes the task; render the trailing trash affordance only when provided. */
+  onDelete?: (taskId: string) => void;
 }) {
   const completed = task.status === "completed";
   const dueLabel = formatDueDate(task.scheduledFor);
   const isOwnedByMe = task.owner?.id != null && task.owner.id === meUserId;
 
   const surface =
-    "min-h-[58px] grid grid-cols-[21px_minmax(0,1fr)_auto_auto_auto_23px] items-center gap-3 border-b border-[#ebedf4]";
+    "group grid min-h-[58px] grid-cols-[21px_minmax(0,1fr)_auto_auto_auto_auto_26px] items-center gap-3 border-b border-[#ebedf4]";
 
   return (
     <article
@@ -149,6 +152,18 @@ export function TaskRow({
       ) : (
         <span aria-hidden="true" className="w-px" />
       )}
+
+      {onDelete ? (
+        <button
+          type="button"
+          aria-label={`Delete "${task.title}"`}
+          title="Delete task"
+          onClick={() => onDelete(task.id)}
+          className="flex size-6 items-center justify-center rounded-md text-[#aab0c4] opacity-0 transition-all hover:bg-[#ff765d]/10 hover:text-[#bd503b] focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff765d] group-focus-within:opacity-100 group-hover:opacity-100"
+        >
+          <Trash2 className="size-4" />
+        </button>
+      ) : null}
     </article>
   );
 }

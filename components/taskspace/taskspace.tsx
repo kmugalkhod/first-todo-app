@@ -23,6 +23,7 @@ import {
 import {
   completeTaskAction,
   createTaskAction,
+  deleteTaskAction,
   reopenTaskAction,
 } from "@/lib/server-actions/tasks";
 import { cn } from "@/lib/utils";
@@ -161,6 +162,27 @@ export function Taskspace({
         toast.error(res.error.message ?? "Couldn't update the task.");
         return;
       }
+      router.refresh();
+    });
+  }
+
+  /** Delete a task, removing it optimistically from the snapshot. */
+  async function deleteTask(taskId: string) {
+    if (busyIds.has(taskId)) return;
+    const previous = state.map((group) => ({
+      ...group,
+      tasks: group.tasks.filter((task) => task.id !== taskId),
+    }));
+    setState(previous);
+    if (selectedId === taskId) setSelectedId(null);
+    withBusy(taskId, async () => {
+      const res = await deleteTaskAction(taskId);
+      if (!res.ok) {
+        setState(groups);
+        toast.error(res.error.message ?? "Couldn't delete the task.");
+        return;
+      }
+      toast.success("Task deleted");
       router.refresh();
     });
   }
@@ -457,6 +479,7 @@ export function Taskspace({
                           selected={task.id === selectedId}
                           onSelect={setSelectedId}
                           onToggleComplete={toggleComplete}
+                          onDelete={canEdit ? deleteTask : undefined}
                         />
                       ))}
                     </div>
@@ -538,6 +561,7 @@ export function Taskspace({
             projectName={projectName}
             sectionName={selected.sectionName}
             meUserId={meUserId}
+            onDelete={canEdit ? deleteTask : undefined}
           />
         ) : null}
       </div>
