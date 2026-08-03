@@ -2,9 +2,11 @@
 
 import * as React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Plus } from "lucide-react";
+import { Archive, ArchiveRestore, Plus } from "lucide-react";
+import { toast } from "sonner";
 
 import type { ProjectDTO } from "@/lib/data-access";
+import { restoreProjectAction } from "@/lib/server-actions/projects";
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -30,10 +32,13 @@ import { CreateProjectDialog } from "./create-project-dialog";
  */
 export function ProjectNav({
   projects,
+  archived,
   error,
 }: {
   projects: ProjectDTO[] | null;
   error: string | null;
+  /** Archived projects shown read-only with a restore affordance (Task 0206). */
+  archived?: ProjectDTO[] | null;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -63,8 +68,21 @@ export function ProjectNav({
     );
   }
 
+  async function handleRestore(project: ProjectDTO) {
+    const res = await restoreProjectAction(project.id);
+    if (!res.ok) {
+      toast.error(res.error.message ?? "Couldn't restore the project.");
+      return;
+    }
+    toast.success("Project restored");
+    // The layout re-fetches both lists on refresh, so the project drops from
+    // the archived area and reappears in the active list.
+    router.refresh();
+  }
+
   return (
-    <SidebarGroup className="pb-4 pt-6">
+    <>
+      <SidebarGroup className="pb-4 pt-6">
       <div className="flex items-baseline justify-between gap-2 pr-1">
         <SidebarGroupLabel className="flex-1 px-2 text-[0.62rem] font-[750] uppercase tracking-[0.08em] text-[#c9cdfd]">
           Projects
@@ -131,5 +149,55 @@ export function ProjectNav({
         onCreated={handleCreated}
       />
     </SidebarGroup>
+
+    {archived && archived.length > 0 ? (
+      <SidebarGroup className="pb-4 pt-2">
+        <div className="flex items-baseline justify-between gap-2 pr-1">
+          <SidebarGroupLabel className="flex-1 px-2 text-[0.62rem] font-[750] uppercase tracking-[0.08em] text-[#c9cdfd]">
+            <Archive className="mr-1.5 inline size-3.5" />
+            Archived
+          </SidebarGroupLabel>
+          <span className="text-[0.62rem] font-semibold text-[#c9cdfd]">
+            {archived.length}
+          </span>
+        </div>
+        <SidebarGroupContent>
+          <SidebarMenu className="pt-1">
+            {archived.map((project) => (
+              <SidebarMenuItem key={project.id}>
+                <SidebarMenuButton
+                  isActive={project.id === activeId}
+                  onClick={() => router.push(`/?project=${project.id}`)}
+                  className="h-[34px] gap-[9px] rounded-lg px-2.5 text-[0.74rem] font-[650] text-[#c9cdfd]/85 hover:bg-white/10 hover:text-[#e1e3ff] data-[active=true]:bg-white/15"
+                >
+                  <span
+                    aria-hidden="true"
+                    className="size-[9px] shrink-0 -rotate-45 rounded-[3px] bg-[#c9cdfd]/70"
+                  />
+                  <span className="min-w-0 flex-1 truncate">
+                    {project.name}
+                  </span>
+                  {project.myRole === "owner" ? (
+                    <button
+                      type="button"
+                      aria-label={`Restore ${project.name}`}
+                      title="Restore project"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        void handleRestore(project);
+                      }}
+                      className="flex size-6 shrink-0 items-center justify-center rounded-md text-[#c9cdfd] transition-colors hover:bg-white/15 hover:text-[#edff81]"
+                    >
+                      <ArchiveRestore className="size-3.5" />
+                    </button>
+                  ) : null}
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
+          </SidebarMenu>
+        </SidebarGroupContent>
+      </SidebarGroup>
+    ) : null}
+    </>
   );
 }

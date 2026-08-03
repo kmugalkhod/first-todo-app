@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { listProjectsForActor, type ProjectDTO } from "@/lib/data-access";
 import { AppSidebar } from "@/components/sidebar/app-sidebar";
+import { ProjectHeader } from "@/components/projects/project-header";
 import { ProjectNav } from "@/components/sidebar/project-nav";
 import { ModeToggle } from "@/feature/components/toggle";
 import {
@@ -39,10 +40,18 @@ export default async function ProtectedLayout({
   const { user } = currentUser;
 
   let projects: ProjectDTO[] | null = null;
+  let archived: ProjectDTO[] | null = null;
   let error: string | null = null;
 
   try {
+    // Active projects drive the main list and project header; archived ones are
+    // shown read-only in a separate sidebar area with a restore affordance
+    // (archived are excluded from the active list, PRD FR-2).
     projects = await listProjectsForActor({ id: user.id, email: user.email });
+    archived = await listProjectsForActor(
+      { id: user.id, email: user.email },
+      { status: "archived" },
+    );
   } catch {
     error = "Couldn't load your projects. Please try again.";
   }
@@ -50,7 +59,7 @@ export default async function ProtectedLayout({
   return (
     <SidebarProvider>
       <AppSidebar user={user}>
-        <ProjectNav projects={projects} error={error} />
+        <ProjectNav projects={projects} archived={archived} error={error} />
       </AppSidebar>
       <SidebarInset className="min-h-svh bg-background">
         <header className="flex h-16 shrink-0 items-center justify-between border-b border-border/80 bg-background/95 px-4 sm:px-6">
@@ -65,7 +74,10 @@ export default async function ProtectedLayout({
             <ModeToggle />
           </div>
         </header>
-        <div className="flex-1">{children}</div>
+        <div className="flex-1">
+          <ProjectHeader userId={user.id} />
+          {children}
+        </div>
       </SidebarInset>
     </SidebarProvider>
   );
