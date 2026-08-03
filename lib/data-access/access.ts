@@ -7,60 +7,36 @@ import {
   membershipRoleEnum,
   projectMemberships,
 } from "@/lib/db";
+import {
+  PERMISSIONS,
+  type MembershipRole,
+  type Permission,
+  roleCan,
+} from "@/lib/permissions";
 import { ConflictError, ForbiddenError } from "./errors";
 import type { Actor } from "./types";
 
-export type MembershipRole = (typeof membershipRoleEnum.enumValues)[number];
 export type Membership = typeof projectMemberships.$inferSelect;
 
-/**
- * Explicit, testable role/permission matrix (PRD §7). This is the single
- * place role decision rules live — Task 0204 refines it, it is never scattered
- * as inline `if (role === ...)` checks through components or actions.
- *
- * Level ordering is used only for documentation/diagnostics; enforcement is by
- * membership in the allowed role set, not by numeric comparison.
- */
-const ROLE_LEVEL: Record<MembershipRole, number> = {
-  viewer: 1,
-  editor: 2,
-  owner: 3,
-};
+export {
+  PERMISSIONS,
+  ROLE_LEVEL,
+  ROLES,
+  roleCan,
+  permissionsForRole,
+} from "@/lib/permissions";
+export type { MembershipRole, Permission } from "@/lib/permissions";
 
-export const PERMISSIONS = {
-  /** View a project and its tasks, comments, members and activity (PRD §7). */
-  "project:view": ["viewer", "editor", "owner"],
-  /** Create, edit, complete and reopen tasks. */
-  "task:write": ["editor", "owner"],
-  /** Assign a task to an active project member. */
-  "task:assign": ["editor", "owner"],
-  /** Permanently delete a task. */
-  "task:delete": ["editor", "owner"],
-  /** Create/rename/reorder/remove sections. */
-  "section:write": ["editor", "owner"],
-  /** Create/rename/delete labels and apply them to tasks. */
-  "label:write": ["editor", "owner"],
-  /** Add comments. */
-  "comment:add": ["editor", "owner"],
-  /** Moderate (delete) any comment. */
-  "comment:moderate": ["owner"],
-  /** Invite members (Editor/Viewer) and change their roles. */
-  "member:invite": ["owner"],
-  "member:role": ["owner"],
-  /** Remove members. */
-  "member:remove": ["owner"],
-  /** Transfer ownership, archive/restore the project. */
-  "project:admin": ["owner"],
-} as const satisfies Record<string, readonly MembershipRole[]>;
-
-export type Permission = keyof typeof PERMISSIONS;
-
-export { ROLE_LEVEL };
+// Keep a db-backed alias so the DAO barrel's `MembershipRole` matches the
+// schema enum at the type level (they are structurally identical unions).
+export type MembershipRoleDb = (typeof membershipRoleEnum.enumValues)[number];
 
 /**
  * Return the actor's **active** membership in a project, or `null`. This is
  * the basis for every membership-scoped read — a non-member never sees even a
- * partial row (privacy NFR).
+ * partial row (privacy NFR). Called on every request (never cached), so a
+ * removed/deactivated member loses access immediately, including existing
+ * sessions (PRD §7, Task 0204 step 5).
  */
 export async function getActiveMembership(
   actor: Actor,
@@ -90,6 +66,22 @@ export function hasRole(
 }
 
 /**
+ * Non-throwing permission guard — the shared `can(actor, projectId,
+ * permission)` asked for in Task 0204. Returns whether `actor` may perform
+ * `permission` on `projectId`. Membership is re-queried on every call.
+ * Used by read paths and to derive UI affordances; the throwing equivalent
+ * (`assertPermission`) is what mutations use.
+ */
+export async function can(
+  actor: Actor,
+  projectId: string,
+  permission: Permission,
+): Promise<boolean> {
+  const membership = await getActiveMembership(actor, projectId);
+  return membership ? roleCan(membership.role, permission) : false;
+}
+
+/**
  * Assert the actor has an active membership in `projectId` (throws
  * `ForbiddenError` otherwise) and return it.
  */
@@ -115,7 +107,7 @@ export async function assertPermission(
   permission: Permission,
 ): Promise<Membership> {
   const membership = await assertProjectAccess(actor, projectId);
-  if (!hasRole(membership, ...PERMISSIONS[permission])) {
+  if (!roleCan(membership.role, permission)) {
     throw new ForbiddenError(
       `This action requires the ${PERMISSIONS[permission].join(" or ")} role.`,
     );
@@ -134,7 +126,8 @@ export async function canAccessProject(
 /**
  * Assert that `userId` is an **active** member of `projectId`. Used before
  * assignment/role mutations so changes only ever reference real active members
- * (PRD §7 "assignment must reference an active project member").
+ * (PRD §7 "assignment must reference an active project member"). Assignment
+ * never creates or implies membership.
  */
 export async function assertActiveMember(
   projectId: string,
