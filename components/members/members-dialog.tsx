@@ -51,7 +51,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { MemberAvatar } from "./member-avatar";
 
 const ROLE_LABEL: Record<string, string> = {
@@ -259,13 +258,12 @@ export function MembersDialog({
 
         {canManage ? (
           <form onSubmit={handleInvite} className="space-y-2.5">
-            <p className="text-[0.62rem] font-[750] uppercase tracking-[0.08em] text-muted-foreground">
+            <p className="flex items-center gap-1.5 text-[0.62rem] font-[750] uppercase tracking-[0.08em] text-muted-foreground">
+              <UserPlus className="size-3.5" />
               Invite a collaborator
             </p>
-            <div className="flex gap-2">
-              <Label htmlFor="member-email" className="sr-only">
-                Email
-              </Label>
+            <label className="block text-[0.66rem] font-[750] text-[#56607e]">
+              Email address
               <Input
                 id="member-email"
                 type="email"
@@ -273,27 +271,31 @@ export function MembersDialog({
                 placeholder="name@example.com"
                 value={inviteEmail}
                 onChange={(e) => setInviteEmail(e.target.value)}
-                className="h-9 flex-1"
+                className="mt-[5px] h-[38px] w-full rounded-[7px] border border-[#d8ddec] bg-white px-[9px] text-[0.75rem] text-[#202550] outline-none placeholder:text-[#a1a7c4] focus-visible:border-[#a2aaef] focus-visible:ring-3 focus-visible:ring-[#ff765d]/35"
               />
-              <Label htmlFor="member-role" className="sr-only">
-                Role
-              </Label>
+            </label>
+            <label className="block text-[0.66rem] font-[750] text-[#56607e]">
+              Role
               <select
                 id="member-role"
                 value={inviteRole}
                 onChange={(e) =>
                   setInviteRole(e.target.value as "editor" | "viewer")
                 }
-                className="h-9 cursor-pointer rounded-lg border border-border bg-background px-2 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-[#ff765d]"
+                className="mt-[5px] h-[38px] w-full cursor-pointer rounded-[7px] border border-[#d8ddec] bg-white px-[9px] text-[0.75rem] text-[#202550] outline-none focus-visible:border-[#a2aaef] focus-visible:ring-3 focus-visible:ring-[#ff765d]/35"
               >
-                <option value="editor">Editor</option>
-                <option value="viewer">Viewer</option>
+                <option value="editor">Editor — can edit tasks and sections</option>
+                <option value="viewer">Viewer — can view and comment</option>
               </select>
-              <Button type="submit" size="sm" disabled={inviting || !inviteEmail.trim()}>
-                <UserPlus className="size-3.5" />
-                {inviting ? "Sending…" : "Invite"}
-              </Button>
-            </div>
+            </label>
+            <Button
+              type="submit"
+              disabled={inviting || !inviteEmail.trim()}
+              className="h-[35px] w-full rounded-[7px] bg-[#3543d6] px-3 text-[0.72rem] font-[760] text-white transition-colors hover:bg-[#252d95] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <UserPlus className="size-3.5" />
+              {inviting ? "Sending…" : "Send invitation"}
+            </Button>
           </form>
         ) : null}
 
