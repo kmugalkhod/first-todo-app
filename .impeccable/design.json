@@ -35,6 +35,12 @@
       { "name": "compact-desktop", "value": "1050px" },
       { "name": "tablet", "value": "800px" },
       { "name": "mobile", "value": "620px" }
+    ],
+    "radiusTokens": [
+      { "name": "chip", "value": "5px", "cssVariable": "--taskspace-radius-chip" },
+      { "name": "input", "value": "6px", "cssVariable": "--taskspace-radius-input" },
+      { "name": "control", "value": "8px", "cssVariable": "--taskspace-radius-control" },
+      { "name": "panel", "value": "10px", "cssVariable": "--taskspace-radius-panel" }
     ]
   },
   "components": [
@@ -99,4 +105,3 @@
     "donts": ["Don't turn every task row or section into a raised card.", "Don't hide task context behind a personal-focus queue or replace the selected record with a full-screen detour on desktop.", "Don't treat coral, citron, and green as interchangeable decoration.", "Don't use the display face for dense metadata, controls, or body copy."]
   }
 }
-

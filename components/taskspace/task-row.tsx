@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Trash2 } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, Trash2 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import {
@@ -31,6 +31,9 @@ export function TaskRow({
   onSelect,
   onToggleComplete,
   onDelete,
+  onMove,
+  canMoveUp = false,
+  canMoveDown = false,
 }: {
   task: TaskRowData;
   selected: boolean;
@@ -40,20 +43,24 @@ export function TaskRow({
   onToggleComplete: (taskId: string, complete: boolean) => void;
   /** Deletes the task; render the trailing trash affordance only when provided. */
   onDelete?: (taskId: string) => void;
+  /** Accessible manual ordering controls; drag is intentionally not required. */
+  onMove?: (taskId: string, direction: "up" | "down") => void;
+  canMoveUp?: boolean;
+  canMoveDown?: boolean;
 }) {
   const completed = task.status === "completed";
   const dueLabel = formatDueDate(task.scheduledFor);
   const isOwnedByMe = task.owner?.id != null && task.owner.id === meUserId;
 
   const surface =
-    "group grid min-h-[58px] grid-cols-[21px_minmax(0,1fr)_auto_auto_auto_auto_26px] items-center gap-3 border-b border-[#ebedf4]";
+    "group grid min-h-[62px] grid-cols-[21px_minmax(0,1fr)_auto_auto_auto_auto_auto_26px] items-center gap-3 border-b border-border px-2";
 
   return (
     <article
       className={cn(
         surface,
-        "transition-colors hover:bg-[#f7f8ff]",
-        selected && "rounded-[10px] border-b-transparent bg-[#f7f8ff]",
+        "transition-colors hover:bg-[var(--taskspace-periwinkle-pale)]/50",
+        selected && "rounded-[var(--taskspace-radius-panel)] border-b-transparent bg-[var(--taskspace-periwinkle-pale)]/70",
       )}
     >
       <button
@@ -66,7 +73,7 @@ export function TaskRow({
         }
         onClick={() => onToggleComplete(task.id, !completed)}
         className={cn(
-          "flex size-[19px] shrink-0 items-center justify-center rounded-full border-2 border-[#aab0c4] bg-transparent transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[#ff765d] focus-visible:ring-offset-2 hover:border-primary",
+          "flex size-[19px] shrink-0 items-center justify-center rounded-full border-2 border-[var(--taskspace-muted)]/60 bg-transparent transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[var(--taskspace-coral)] focus-visible:ring-offset-2 hover:border-primary",
           completed && "border-primary bg-primary text-primary-foreground",
         )}
       >
@@ -80,15 +87,17 @@ export function TaskRow({
       >
         <strong
           className={cn(
-            "block truncate text-[0.78rem] font-semibold tracking-[-0.015em] text-[#202550] dark:text-foreground",
+            "block truncate text-[0.78rem] font-semibold tracking-[-0.015em] text-[var(--taskspace-ink)] dark:text-foreground",
             completed && "text-muted-foreground line-through",
           )}
         >
           {task.title}
         </strong>
-        <small className="mt-0.5 block truncate text-[0.65rem] text-[#8990a7] dark:text-muted-foreground">
+        <small className="mt-0.5 block truncate text-[0.65rem] text-[var(--taskspace-muted)] dark:text-muted-foreground">
           {completed
             ? "Completed"
+            : task.subtaskProgress
+              ? `${task.subtaskProgress.completed}/${task.subtaskProgress.total} subtasks`
             : task.priority === "p1" && !task.overdue
               ? "High priority"
               : task.scheduledFor
@@ -102,13 +111,13 @@ export function TaskRow({
           "inline-flex h-5 items-center rounded-[5px] px-1.5 text-[0.59rem] font-extrabold whitespace-nowrap",
           "hidden md:inline-flex",
           task.priority === "p1" &&
-            "bg-[#fff0ed] text-[#b74c3a] dark:bg-[#7c251c]/40 dark:text-[#ffb5a6]",
+            "bg-[var(--taskspace-coral)]/15 text-[var(--taskspace-coral)]",
           task.priority === "p2" &&
-            "bg-[#fff6d8] text-[#90701c] dark:bg-[#76540b]/35 dark:text-[#f9d98a]",
+            "bg-[var(--taskspace-canvas)] text-[var(--taskspace-cobalt-deep)]",
           task.priority === "p3" &&
-            "bg-[#eef0ff] text-[#5963ae] dark:bg-[#3a428f]/35 dark:text-[#c3c9ff]",
+            "bg-[var(--taskspace-periwinkle-pale)] text-[var(--taskspace-cobalt-deep)]",
           task.priority === "p4" &&
-            "bg-[#eff2f4] text-[#6e7887] dark:bg-[#333a46]/40 dark:text-[#c7cdd6]",
+            "bg-[var(--taskspace-paper)] text-[var(--taskspace-muted)]",
         )}
       >
         {priorityLabel(task.priority)}
@@ -118,7 +127,7 @@ export function TaskRow({
         {task.labels.slice(0, 2).map((label) => (
           <span
             key={label.id}
-            className="inline-flex h-5 max-w-28 items-center overflow-hidden rounded-[5px] bg-[#e9f7ec] px-1.5 text-[0.59rem] font-extrabold whitespace-nowrap text-[#37734f] dark:bg-[#1d5d3a]/35 dark:text-[#a9dfc1]"
+            className="inline-flex h-5 max-w-28 items-center overflow-hidden rounded-[var(--taskspace-radius-chip)] bg-[var(--taskspace-periwinkle-pale)] px-1.5 text-[0.59rem] font-extrabold whitespace-nowrap text-[var(--taskspace-cobalt-deep)]"
           >
             <span className="truncate">{label.name}</span>
           </span>
@@ -128,8 +137,8 @@ export function TaskRow({
       {task.scheduledFor ? (
         <span
           className={cn(
-            "whitespace-nowrap text-[0.64rem] font-bold text-[#67718e] dark:text-muted-foreground",
-            task.overdue && "text-[#bd503b] dark:text-[#ff8a72]",
+            "whitespace-nowrap text-[0.64rem] font-bold text-[var(--taskspace-muted)] dark:text-muted-foreground",
+            task.overdue && "text-[var(--taskspace-coral)]",
           )}
         >
           {task.overdue ? `Overdue · ${dueLabel}` : dueLabel}
@@ -143,8 +152,8 @@ export function TaskRow({
           aria-label={`Assigned to ${task.owner.name}`}
           title={task.owner.name}
           className={cn(
-            "flex size-6 items-center justify-center rounded-full text-[0.62rem] font-extrabold text-[#252d95] dark:text-[#1d2350]",
-            isOwnedByMe ? "bg-[#edff81]" : "bg-[#bcc2ee] dark:bg-[#3a428f]",
+            "flex size-6 items-center justify-center rounded-full text-[0.62rem] font-extrabold text-[var(--taskspace-cobalt-deep)]",
+            isOwnedByMe ? "bg-[var(--taskspace-citron)]" : "bg-[var(--taskspace-canvas)]",
           )}
         >
           {initials(task.owner.name)}
@@ -153,13 +162,38 @@ export function TaskRow({
         <span aria-hidden="true" className="w-px" />
       )}
 
+      {onMove ? (
+        <span className="hidden flex-col sm:flex" aria-label={`Reorder ${task.title}`}>
+          <button
+            type="button"
+            aria-label={`Move ${task.title} up`}
+            disabled={!canMoveUp}
+            onClick={() => onMove(task.id, "up")}
+            className="flex size-4 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff765d] disabled:opacity-35"
+          >
+            <ChevronUp className="size-3" />
+          </button>
+          <button
+            type="button"
+            aria-label={`Move ${task.title} down`}
+            disabled={!canMoveDown}
+            onClick={() => onMove(task.id, "down")}
+            className="flex size-4 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff765d] disabled:opacity-35"
+          >
+            <ChevronDown className="size-3" />
+          </button>
+        </span>
+      ) : (
+        <span aria-hidden="true" className="hidden sm:block" />
+      )}
+
       {onDelete ? (
         <button
           type="button"
           aria-label={`Delete "${task.title}"`}
           title="Delete task"
           onClick={() => onDelete(task.id)}
-          className="flex size-6 items-center justify-center rounded-md text-[#aab0c4] opacity-0 transition-all hover:bg-[#ff765d]/10 hover:text-[#bd503b] focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff765d] group-focus-within:opacity-100 group-hover:opacity-100"
+          className="flex size-6 items-center justify-center rounded-[var(--taskspace-radius-input)] text-[var(--taskspace-muted)] opacity-0 transition-all hover:bg-[var(--taskspace-coral)]/10 hover:text-[var(--taskspace-coral)] focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--taskspace-coral)] group-focus-within:opacity-100 group-hover:opacity-100"
         >
           <Trash2 className="size-4" />
         </button>

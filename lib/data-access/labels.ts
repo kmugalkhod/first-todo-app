@@ -10,7 +10,7 @@ import {
   NotFoundError,
   ValidationError,
 } from "./errors";
-import { recordActivity } from "./activity";
+import { recordActivity, recordActivityInTx } from "./activity";
 import { transaction } from "./transaction";
 import type { Actor } from "./types";
 
@@ -170,7 +170,8 @@ export async function setTaskLabels(
   const [task] = await db.select().from(tasks).where(eq(tasks.id, taskId)).limit(1);
   if (!task) throw new NotFoundError("Task not found.");
   if (!task.projectId) throw new ForbiddenError("This inbox task is not project-scoped.");
-  await assertPermission(actor, task.projectId, "task:write");
+  const projectId = task.projectId;
+  await assertPermission(actor, projectId, "task:write");
 
   const unique = [...new Set(labelIds)];
 
@@ -178,7 +179,7 @@ export async function setTaskLabels(
     const rows = await db
       .select({ id: labels.id })
       .from(labels)
-      .where(and(eq(labels.projectId, task.projectId), inArray(labels.id, unique)));
+      .where(and(eq(labels.projectId, projectId), inArray(labels.id, unique)));
     if (rows.length !== unique.length) {
       throw new ValidationError("One or more labels do not belong to this project.");
     }
@@ -189,6 +190,13 @@ export async function setTaskLabels(
     if (unique.length > 0) {
       await tx.insert(taskLabels).values(unique.map((labelId) => ({ taskId, labelId })));
     }
+    await recordActivityInTx(tx, {
+      projectId,
+      actorId: actor.id,
+      action: "task_updated",
+      taskId,
+      metadata: { labelsChanged: true },
+    });
   });
 
   return { labelIds: unique };

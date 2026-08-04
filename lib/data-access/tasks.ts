@@ -1,10 +1,11 @@
 import "server-only";
 
-import { and, asc, eq, isNull } from "drizzle-orm";
+import { and, asc, eq, gte, ilike, inArray, isNull, lt, or } from "drizzle-orm";
 
 import {
   db,
   projectMemberships,
+  projects,
   sections,
   taskLabels,
   taskPriorityEnum,
@@ -29,6 +30,7 @@ export type TaskDTO = {
   id: string;
   projectId: string | null;
   sectionId: string | null;
+  createdBy: string | null;
   parentTaskId: string | null;
   title: string;
   description: string | null;
@@ -48,6 +50,7 @@ function toTaskDTO(row: typeof tasks.$inferSelect): TaskDTO {
     id: row.id,
     projectId: row.projectId,
     sectionId: row.sectionId,
+    createdBy: row.createdBy,
     parentTaskId: row.parentTaskId,
     title: row.title,
     description: row.description,
@@ -64,9 +67,8 @@ function toTaskDTO(row: typeof tasks.$inferSelect): TaskDTO {
 }
 
 /**
- * Load a task, requiring the actor holds `permission` on its project. Inbox
- * tasks (no project) are intentionally out of scope here — they are managed by
- * the Inbox feature (Task 0400).
+ * Load a task for a write. Project tasks need the requested project permission;
+ * private Inbox tasks belong exclusively to their creator.
  */
 async function loadTaskWithPermission(
   actor: Actor,
@@ -79,9 +81,12 @@ async function loadTaskWithPermission(
     .where(eq(tasks.id, taskId))
     .limit(1);
   if (!task) throw new NotFoundError("Task not found.");
-  if (!task.projectId) throw new ForbiddenError("This inbox task is not project-scoped.");
+  if (!task.projectId) {
+    if (task.createdBy !== actor.id) throw new ForbiddenError("You do not have access to this inbox task.");
+    return { task, projectId: null };
+  }
   await assertPermission(actor, task.projectId, permission);
-  const projectId = task.projectId;
+  const projectId: string | null = task.projectId;
   return { task, projectId };
 }
 
@@ -96,13 +101,26 @@ async function assertSectionInProject(sectionId: string, projectId: string) {
 }
 
 /** Validate that a parent task (when given) belongs to `projectId`. */
-async function assertParentInProject(parentTaskId: string, projectId: string) {
+async function assertParentInProject(parentTaskId: string, projectId: string, taskId?: string) {
   const [parent] = await db
     .select()
     .from(tasks)
     .where(and(eq(tasks.id, parentTaskId), eq(tasks.projectId, projectId)))
     .limit(1);
   if (!parent) throw new ValidationError("Parent task is not in this project.");
+  if (parent.id === taskId) throw new ValidationError("A task cannot be its own parent.");
+  let depth = 1;
+  let cursor = parent;
+  const seen = new Set<string>(taskId ? [taskId] : []);
+  while (cursor.parentTaskId) {
+    if (seen.has(cursor.id)) throw new ValidationError("Task hierarchy cannot contain a cycle.");
+    seen.add(cursor.id);
+    const [next] = await db.select().from(tasks).where(eq(tasks.id, cursor.parentTaskId)).limit(1);
+    if (!next || next.projectId !== projectId) throw new ValidationError("Parent task is not in this project.");
+    cursor = next;
+    depth += 1;
+  }
+  if (depth >= 4) throw new ValidationError("Sub-tasks can be nested at most four levels deep.");
 }
 
 export type CreateTaskInput = {
@@ -115,6 +133,32 @@ export type CreateTaskInput = {
   scheduledFor?: Date | null;
   position?: number | null;
 };
+
+/** A private, actor-owned Inbox task. Inbox has no synthetic project. */
+export async function createInboxTask(
+  actor: Actor,
+  input: Pick<CreateTaskInput, "title" | "description" | "priority" | "scheduledFor">,
+): Promise<TaskDTO> {
+  const title = input.title?.trim();
+  if (!title) throw new ValidationError("Task title is required.");
+  const id = crypto.randomUUID();
+  const now = new Date();
+  await db.insert(tasks).values({
+    id,
+    createdBy: actor.id,
+    projectId: null,
+    title,
+    description: input.description ?? null,
+    priority: input.priority ?? "p3",
+    scheduledFor: input.scheduledFor ?? null,
+    status: "active",
+    position: 0,
+    createdAt: now,
+    updatedAt: now,
+  });
+  const [row] = await db.select().from(tasks).where(eq(tasks.id, id)).limit(1);
+  return toTaskDTO(row);
+}
 
 /** Create a task in a project (editor/owner). All inputs validated server-side. */
 export async function createTask(
@@ -137,6 +181,7 @@ export async function createTask(
   await transaction(async (tx) => {
     await tx.insert(tasks).values({
       id,
+      createdBy: actor.id,
       projectId,
       sectionId: input.sectionId ?? null,
       parentTaskId: input.parentTaskId ?? null,
@@ -168,9 +213,67 @@ export async function createTask(
 /** Get a task, or null for non-members / non-existent tasks (privacy NFR). */
 export async function getTask(actor: Actor, taskId: string): Promise<TaskDTO | null> {
   const [row] = await db.select().from(tasks).where(eq(tasks.id, taskId)).limit(1);
-  if (!row || !row.projectId) return null;
+  if (!row) return null;
+  if (!row.projectId) return row.createdBy === actor.id ? toTaskDTO(row) : null;
   if (!(await canAccessProject(actor, row.projectId))) return null;
   return toTaskDTO(row);
+}
+
+/** List the actor's private Inbox. No membership row can expose these tasks. */
+export async function listInboxTasks(actor: Actor, opts?: { includeCompleted?: boolean }) {
+  const conditions = [isNull(tasks.projectId), eq(tasks.createdBy, actor.id)];
+  if (opts?.includeCompleted !== true) conditions.push(eq(tasks.status, "active"));
+  const rows = await db.select().from(tasks).where(and(...conditions)).orderBy(asc(tasks.position), asc(tasks.createdAt));
+  return rows.map(toTaskDTO);
+}
+
+export type AccessibleTaskScope = "today" | "upcoming" | "all";
+
+/**
+ * Tasks visible to the actor across active memberships plus their Inbox.
+ * Scope is applied in SQL with the membership predicate — never after fetch.
+ */
+export async function listAccessibleTasks(
+  actor: Actor,
+  opts: { scope?: AccessibleTaskScope; start?: Date; end?: Date; includeCompleted?: boolean } = {},
+): Promise<TaskDTO[]> {
+  const membershipTaskIds = db
+    .select({ id: projectMemberships.projectId })
+    .from(projectMemberships)
+    .innerJoin(projects, eq(projects.id, projectMemberships.projectId))
+    .where(and(eq(projectMemberships.userId, actor.id), eq(projectMemberships.status, "active"), eq(projects.status, "active")));
+  const visibility = or(inArray(tasks.projectId, membershipTaskIds), and(isNull(tasks.projectId), eq(tasks.createdBy, actor.id)));
+  const conditions = [visibility];
+  if (opts.includeCompleted !== true) conditions.push(eq(tasks.status, "active"));
+  if (opts.scope === "upcoming" && opts.end) conditions.push(gte(tasks.scheduledFor, opts.end));
+  if (opts.scope === "today" && opts.start && opts.end) {
+    conditions.push(or(and(gte(tasks.scheduledFor, opts.start), lt(tasks.scheduledFor, opts.end)), lt(tasks.scheduledFor, opts.start)));
+  }
+  const rows = await db.select().from(tasks).where(and(...conditions)).orderBy(asc(tasks.position), asc(tasks.scheduledFor), asc(tasks.priority), asc(tasks.createdAt));
+  return rows.map(toTaskDTO);
+}
+
+export type SearchResult = { projects: Array<{ id: string; name: string }>; tasks: TaskDTO[] };
+
+/** Privacy-scoped server-side search across active projects, tasks and Inbox. */
+export async function searchAccessibleWork(actor: Actor, query: string): Promise<SearchResult> {
+  const needle = query.trim();
+  if (!needle) return { projects: [], tasks: [] };
+  const projectIds = db
+    .select({ id: projectMemberships.projectId })
+    .from(projectMemberships)
+    .innerJoin(projects, eq(projects.id, projectMemberships.projectId))
+    .where(and(eq(projectMemberships.userId, actor.id), eq(projectMemberships.status, "active"), eq(projects.status, "active")));
+  const projectRows = await db
+    .select({ id: projects.id, name: projects.name })
+    .from(projects)
+    .where(and(inArray(projects.id, projectIds), eq(projects.status, "active"), ilike(projects.name, `%${needle}%`)));
+  // Task title/description only; query scope is memberships + the actor's Inbox.
+  const taskRows = await db.select().from(tasks).where(and(
+    or(inArray(tasks.projectId, projectIds), and(isNull(tasks.projectId), eq(tasks.createdBy, actor.id))),
+    or(ilike(tasks.title, `%${needle}%`), ilike(tasks.description, `%${needle}%`)),
+  )).orderBy(asc(tasks.position), asc(tasks.createdAt));
+  return { projects: projectRows.map((row) => ({ id: row.id, name: row.name })), tasks: taskRows.map(toTaskDTO) };
 }
 
 export type ListTasksOptions = {
@@ -226,43 +329,76 @@ export async function updateTask(
 
   const patch: Partial<typeof tasks.$inferInsert> = { updatedAt: new Date() };
 
+  if (!projectId && (input.sectionId !== undefined || input.parentTaskId !== undefined || input.assigneeId !== undefined)) {
+    throw new ValidationError("Move this Inbox task into a project before setting project properties.");
+  }
+  const scopedProjectId = projectId;
+
   if (input.title !== undefined) {
     const title = input.title.trim();
     if (!title) throw new ValidationError("Task title is required.");
     patch.title = title;
   }
   if (input.description !== undefined) patch.description = input.description ?? null;
-  if (input.priority !== undefined) patch.priority = input.priority;
+  if (input.priority !== undefined) {
+    if (!taskPriorityEnum.enumValues.includes(input.priority)) throw new ValidationError("Priority must be P1, P2, P3, or P4.");
+    patch.priority = input.priority;
+  }
   if (input.scheduledFor !== undefined) patch.scheduledFor = input.scheduledFor ?? null;
   if (input.position !== undefined) patch.position = input.position;
 
   if (input.sectionId !== undefined) {
-    if (input.sectionId) await assertSectionInProject(input.sectionId, projectId);
+    if (input.sectionId && scopedProjectId) await assertSectionInProject(input.sectionId, scopedProjectId);
     patch.sectionId = input.sectionId ?? null;
   }
   if (input.parentTaskId !== undefined) {
-    if (input.parentTaskId) await assertParentInProject(input.parentTaskId, projectId);
+    if (input.parentTaskId && scopedProjectId) await assertParentInProject(input.parentTaskId, scopedProjectId, taskId);
     patch.parentTaskId = input.parentTaskId ?? null;
   }
   if (input.assigneeId !== undefined) {
-    if (input.assigneeId) await assertActiveMember(projectId, input.assigneeId);
+    if (input.assigneeId && scopedProjectId) await assertActiveMember(scopedProjectId, input.assigneeId);
     patch.assigneeId = input.assigneeId ?? null;
   }
 
   const changed = Object.keys(patch).filter((k) => k !== "updatedAt");
   await transaction(async (tx) => {
     await tx.update(tasks).set(patch).where(eq(tasks.id, taskId));
-    await recordActivityInTx(tx, {
-      projectId,
-      actorId: actor.id,
-      action: "task_updated",
-      taskId,
-      metadata: { changed },
-    });
+    if (projectId) {
+      await recordActivityInTx(tx, {
+        projectId,
+        actorId: actor.id,
+        action: "task_updated",
+        taskId,
+        metadata: { changed },
+      });
+    }
   });
 
   const [row] = await db.select().from(tasks).where(eq(tasks.id, taskId)).limit(1);
   return toTaskDTO(row);
+}
+
+/** Reorder a section's direct tasks in one dense, deterministic transaction. */
+export async function reorderTasks(
+  actor: Actor,
+  projectId: string,
+  sectionId: string | null,
+  orderedIds: string[],
+): Promise<void> {
+  await assertPermission(actor, projectId, "task:write");
+  const scope = and(eq(tasks.projectId, projectId), sectionId ? eq(tasks.sectionId, sectionId) : isNull(tasks.sectionId));
+  const rows = await db.select({ id: tasks.id }).from(tasks).where(scope).orderBy(asc(tasks.position), asc(tasks.createdAt));
+  const expected = new Set(rows.map((row) => row.id));
+  if (orderedIds.length !== expected.size || new Set(orderedIds).size !== orderedIds.length || orderedIds.some((id) => !expected.has(id))) {
+    throw new ValidationError("Task order must include every task in the section exactly once.");
+  }
+  const now = new Date();
+  await transaction(async (tx) => {
+    for (const [position, id] of orderedIds.entries()) {
+      await tx.update(tasks).set({ position, updatedAt: now }).where(eq(tasks.id, id));
+    }
+    await recordActivityInTx(tx, { projectId, actorId: actor.id, action: "task_updated", metadata: { reordered: true, sectionId } });
+  });
 }
 
 /** Complete a task, recording who and when (editor/owner, PRD FR-4). */
@@ -276,12 +412,8 @@ export async function completeTask(actor: Actor, taskId: string): Promise<TaskDT
       .update(tasks)
       .set({ status: "completed", completedAt: now, completedBy: actor.id, updatedAt: now })
       .where(eq(tasks.id, taskId));
-    await recordActivityInTx(tx, {
-      projectId,
-      actorId: actor.id,
-      action: "task_completed",
-      taskId,
-      metadata: { title: task.title },
+    if (projectId) await recordActivityInTx(tx, {
+      projectId, actorId: actor.id, action: "task_completed", taskId, metadata: { title: task.title },
     });
   });
 
@@ -300,12 +432,8 @@ export async function reopenTask(actor: Actor, taskId: string): Promise<TaskDTO>
       .update(tasks)
       .set({ status: "active", completedAt: null, completedBy: null, updatedAt: now })
       .where(eq(tasks.id, taskId));
-    await recordActivityInTx(tx, {
-      projectId,
-      actorId: actor.id,
-      action: "task_reopened",
-      taskId,
-      metadata: { title: task.title },
+    if (projectId) await recordActivityInTx(tx, {
+      projectId, actorId: actor.id, action: "task_reopened", taskId, metadata: { title: task.title },
     });
   });
 
@@ -320,6 +448,8 @@ export async function assignTask(
   assigneeId: string | null,
 ): Promise<TaskDTO> {
   const { task, projectId } = await loadTaskWithPermission(actor, taskId, "task:assign");
+
+  if (!projectId) throw new ForbiddenError("Inbox tasks cannot be assigned until they are moved to a project.");
 
   if (assigneeId) await assertActiveMember(projectId, assigneeId);
 
@@ -349,11 +479,8 @@ export async function deleteTask(actor: Actor, taskId: string): Promise<void> {
     await tx.delete(tasks).where(eq(tasks.id, taskId));
     // Attribute the deletion to the project it was removed from (taskId is
     // dropped because the row no longer exists, but the event survives).
-    await recordActivityInTx(tx, {
-      projectId,
-      actorId: actor.id,
-      action: "task_deleted",
-      metadata: { title: task.title },
+    if (projectId) await recordActivityInTx(tx, {
+      projectId, actorId: actor.id, action: "task_deleted", metadata: { title: task.title },
     });
   });
 }

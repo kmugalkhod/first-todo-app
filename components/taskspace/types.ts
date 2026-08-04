@@ -24,6 +24,13 @@ export type TaskRowData = {
   priority: TaskRowPriority;
   labels: TaskLabel[];
   sectionId: string | null;
+  parentTaskId?: string | null;
+  /** Direct child progress; parent completion never changes unfinished children. */
+  subtaskProgress?: { completed: number; total: number };
+  /** Direct children shown in the selected record; nested work stays in context. */
+  subtasks?: Array<{ id: string; title: string; status: TaskRowStatus }>;
+  comments?: Array<{ id: string; authorId: string | null; author: string; body: string; createdAt: string }>;
+  activity?: Array<{ id: string; actor: string; action: string; createdAt: string }>;
   /** ISO date string (from the server `Date`), or null when unscheduled. */
   scheduledFor: string | null;
   /** Pre-computed on the server against the server clock (coral attention). */

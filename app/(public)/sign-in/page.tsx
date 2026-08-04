@@ -67,12 +67,30 @@ export default function SignInPage() {
   if (isPending) return null;
 
   return (
-    <main className="flex min-h-svh items-center justify-center bg-background px-4 py-12">
-      <div className="w-full max-w-sm rounded-xl border border-border bg-card p-6 shadow-sm sm:p-8">
-        <p className="text-sm font-medium text-primary">Taskspace</p>
-        <h1 className="mt-1 text-2xl font-semibold tracking-[-0.02em] text-foreground">
+    <main className="flex min-h-svh items-center justify-center bg-[var(--taskspace-canvas)] px-4 py-8 sm:p-10">
+      <div className="w-full max-w-4xl overflow-hidden rounded-[var(--taskspace-radius-dialog)] border border-border bg-[var(--taskspace-paper)] shadow-[var(--taskspace-shell-shadow)] md:grid md:grid-cols-[0.9fr_1fr] md:rounded-[var(--taskspace-radius-shell)]">
+        <section className="hidden min-h-[560px] flex-col justify-between bg-[var(--taskspace-cobalt)] p-10 text-white md:flex">
+          <div>
+            <div className="flex items-center gap-3 text-sm font-extrabold tracking-[-0.04em]">
+              <span className="relative flex size-8 items-center justify-center" aria-hidden="true">
+                <span className="absolute size-4 rotate-45 rounded-[var(--taskspace-radius-chip)] bg-[var(--taskspace-citron)]" />
+                <span className="relative size-2.5 rounded-full bg-[var(--taskspace-cobalt)] ring-2 ring-white/80" />
+              </span>
+              Taskspace
+            </div>
+            <h1 className="mt-20 max-w-sm font-heading text-[clamp(2.5rem,5vw,4.5rem)] font-semibold leading-[0.9] tracking-[-0.04em]">
+              Make the next move clear.
+            </h1>
+          </div>
+          <p className="max-w-xs text-sm leading-6 text-white/75">
+            A shared workboard for the decisions, owners, and next steps that keep a project moving.
+          </p>
+        </section>
+        <div className="w-full p-6 sm:p-10 md:flex md:min-h-[560px] md:flex-col md:justify-center">
+        <p className="text-[0.62rem] font-[760] uppercase tracking-[0.08em] text-[var(--taskspace-cobalt)] md:hidden">Taskspace</p>
+        <h2 className="mt-2 font-heading text-[clamp(2rem,4vw,3rem)] font-semibold leading-[0.94] tracking-[-0.04em] text-foreground md:mt-0">
           {sent ? "Check your inbox" : "Sign in"}
-        </h1>
+        </h2>
         <p className="mt-2 text-sm leading-6 text-muted-foreground">
           {sent
             ? "We emailed you a sign-in link. It expires in 10 minutes."
@@ -95,13 +113,13 @@ export default function SignInPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
-                className="h-11 rounded-xl px-3.5"
+                className="h-11 rounded-[var(--taskspace-radius-input)] px-3.5"
               />
             </div>
             {error ? (
               <p role="alert" className="text-sm text-destructive">{error}</p>
             ) : null}
-            <Button type="submit" disabled={loading} className="h-11 rounded-xl">
+            <Button type="submit" disabled={loading} className="h-11 rounded-[var(--taskspace-radius-control)]">
               {loading ? "Sending…" : "Email me a sign-in link"}
             </Button>
           </form>
@@ -118,12 +136,13 @@ export default function SignInPage() {
               variant="outline"
               disabled={googleLoading}
               onClick={signInWithGoogle}
-              className="w-full rounded-xl"
+              className="w-full rounded-[var(--taskspace-radius-control)]"
             >
               Continue with Google
             </Button>
           </>
         ) : null}
+        </div>
       </div>
     </main>
   );
