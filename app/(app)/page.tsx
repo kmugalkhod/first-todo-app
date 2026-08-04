@@ -209,8 +209,9 @@ export default async function TaskspaceHome({
   // with that full-bleed header we use the same horizontal padding instead of a
   // narrow centred column — matching the prototype's flat, full-width .content.
   return (
-    <main className="px-4 py-6 sm:px-8">
+    <main>
       <Taskspace
+        key={projectId}
         projectId={projectId}
         projectName={loadedProject.name}
         meUserId={user.id}

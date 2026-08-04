@@ -4,6 +4,7 @@ import {
   CalendarDays,
   CheckCircle2,
   Circle,
+  PencilLine,
   Tag,
   Trash2,
   User,
@@ -38,6 +39,28 @@ function linkify(text: string) {
   return text.split(/(https?:\/\/[^\s]+)/g).map((part, index) => /^https?:\/\//.test(part) ? <a key={index} href={part} target="_blank" rel="noreferrer" className="text-primary underline">{part}</a> : part);
 }
 
+function Property({
+  label,
+  icon,
+  children,
+}: {
+  label: string;
+  icon?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="grid min-h-[25px] grid-cols-[84px_minmax(0,1fr)] items-center gap-2 text-xs">
+      <dt className="flex items-center gap-1.5 text-[var(--taskspace-muted)]">
+        {icon}
+        {label}
+      </dt>
+      <dd className="flex min-w-0 flex-wrap items-center gap-1.5 font-bold text-[var(--taskspace-ink)]">
+        {children}
+      </dd>
+    </div>
+  );
+}
+
 export function TaskDetailRecord({
   task,
   projectName,
@@ -67,6 +90,8 @@ export function TaskDetailRecord({
   const [saving, setSaving] = React.useState(false);
   const [labelName, setLabelName] = React.useState("");
   const [subtaskTitle, setSubtaskTitle] = React.useState("");
+  const [editing, setEditing] = React.useState(false);
+  const [managingLabels, setManagingLabels] = React.useState(false);
   const completed = task.status === "completed";
   const isOwnedByMe = task.owner?.id != null && task.owner.id === meUserId;
   const dueLabel = formatDueDate(task.scheduledFor);
@@ -113,14 +138,15 @@ export function TaskDetailRecord({
         {sectionName ? ` / ${sectionName}` : ""}
       </p>
 
-      <div className="flex items-start gap-2.5">
+      <div className="flex items-start justify-between gap-2.5">
+        <div className="flex min-w-0 items-start gap-2.5">
         <span
           className={cn(
             "mt-0.5 size-4 shrink-0",
             completed
               ? "text-primary"
               : task.overdue
-                ? "text-[#bd503b] dark:text-[#ff8a72]"
+                ? "text-[var(--taskspace-coral)]"
                 : "text-muted-foreground",
           )}
         >
@@ -138,9 +164,19 @@ export function TaskDetailRecord({
         >
           {task.title}
         </h2>
+        </div>
+        {canEdit ? (
+          <button
+            type="button"
+            aria-pressed={editing}
+            onClick={() => setEditing((value) => !value)}
+            className="flex size-7 shrink-0 items-center justify-center rounded-[var(--taskspace-radius-control)] text-muted-foreground transition-colors hover:bg-[var(--taskspace-periwinkle-pale)] hover:text-[var(--taskspace-cobalt-deep)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--taskspace-coral)] focus-visible:ring-offset-2"
+            aria-label={editing ? "Close task editor" : "Edit task"}
+          >
+            <PencilLine className="size-3.5" />
+          </button>
+        ) : null}
       </div>
-
-      {canEdit ? <form onSubmit={(event) => { event.preventDefault(); const data = new FormData(event.currentTarget); void update({ title: String(data.get("title")), description: String(data.get("description")) || null, priority: String(data.get("priority")) as TaskRowData["priority"], scheduledFor: data.get("scheduledFor") ? new Date(String(data.get("scheduledFor"))) : null }); }} className="flex flex-col gap-2 border-y border-border py-3"><label className="text-xs font-semibold" htmlFor={`title-${task.id}`}>Task details</label><input id={`title-${task.id}`} name="title" defaultValue={task.title} className="rounded-md border border-input bg-background px-2 py-1.5 text-sm" /><textarea name="description" defaultValue={task.description ?? ""} className="min-h-20 rounded-md border border-input bg-background px-2 py-1.5 text-sm" /><div className="grid grid-cols-2 gap-2"><select name="priority" defaultValue={task.priority} className="rounded-md border border-input bg-background px-2 py-1.5 text-sm"><option value="p1">P1</option><option value="p2">P2</option><option value="p3">P3</option><option value="p4">P4</option></select><input name="scheduledFor" type="date" defaultValue={task.scheduledFor?.slice(0, 10) ?? ""} className="rounded-md border border-input bg-background px-2 py-1.5 text-sm" /></div><button disabled={saving} className="self-start rounded-md bg-primary px-2 py-1 text-xs font-semibold text-primary-foreground">Save details</button></form> : null}
 
       {task.description ? (
         <p className="whitespace-pre-wrap text-sm leading-6 text-muted-foreground">
@@ -152,67 +188,24 @@ export function TaskDetailRecord({
         </p>
       )}
 
-      <dl className="flex flex-col gap-1.5 text-sm">
-        {task.scheduledFor ? (
-          <div className="flex items-center gap-2.5 text-foreground">
-            <CalendarDays className="size-4 shrink-0 text-muted-foreground" />
-            <dt className="sr-only">Due</dt>
-            <dd
-              className={cn(
-                "font-medium",
-                task.overdue && "text-[#bd503b] dark:text-[#ff8a72]",
-              )}
-            >
-              {task.overdue ? `Overdue · ${dueLabel}` : dueLabel}
-            </dd>
-          </div>
-        ) : null}
-
-        <div className="flex items-center gap-2.5">
-          <span className="text-xs font-bold text-muted-foreground">
-            Priority
-          </span>
-          <dt className="sr-only">Priority</dt>
-          <dd className="font-medium">{priorityLabel(task.priority)}</dd>
-        </div>
-
-        {task.labels.length > 0 ? (
-          <div className="flex items-center gap-2.5">
-            <Tag className="size-4 shrink-0 text-muted-foreground" />
-            <dt className="sr-only">Labels</dt>
-            <dd className="flex flex-wrap gap-1.5">
-              {task.labels.map((label) => (
-                <span
-                  key={label.id}
-                  className="inline-flex h-5 items-center rounded-[5px] bg-[#e9f7ec] px-1.5 text-[0.62rem] font-bold text-[#37734f] dark:bg-[#1d5d3a]/35 dark:text-[#a9dfc1]"
-                >
-                  {label.name}
-                </span>
-              ))}
-            </dd>
-          </div>
-        ) : null}
-
-        {task.owner ? (
-          <div className="flex items-center gap-2.5">
-            <User className="size-4 shrink-0 text-muted-foreground" />
-            <dt className="sr-only">Owner</dt>
-            <dd className="flex items-center gap-2 font-medium">
-              <span
-                className={cn(
-                  "flex size-6 items-center justify-center rounded-full text-[0.62rem] font-extrabold text-[#252d95] dark:text-[#1d2350]",
-                  isOwnedByMe ? "bg-[#edff81]" : "bg-[#bcc2ee] dark:bg-[#3a428f]",
-                )}
-              >
-                {initials(task.owner.name)}
-              </span>
-              {task.owner.name}
-            </dd>
-          </div>
-        ) : null}
+      <dl className="grid gap-2 border-y border-border py-[14px] text-xs">
+        <Property label="Assignee" icon={<User className="size-3.5" />}>
+          {task.owner ? <><span className={cn("flex size-[21px] items-center justify-center rounded-full text-[0.59rem] font-extrabold text-[var(--taskspace-cobalt-deep)]", isOwnedByMe ? "bg-[var(--taskspace-citron)]" : "bg-[var(--taskspace-periwinkle-pale)]")}>{initials(task.owner.name)}</span>{task.owner.name}</> : "Unassigned"}
+        </Property>
+        <Property label="Planned" icon={<CalendarDays className="size-3.5" />}>
+          <span className={cn(task.overdue && "text-[var(--taskspace-coral)]")}>{task.scheduledFor ? (task.overdue ? `Overdue · ${dueLabel}` : dueLabel) : "No date"}</span>
+        </Property>
+        <Property label="Priority">
+          <span className="inline-flex h-5 items-center rounded-[var(--taskspace-radius-chip)] bg-[var(--taskspace-periwinkle-pale)] px-1.5 text-[0.62rem] font-extrabold text-[var(--taskspace-cobalt-deep)]">{priorityLabel(task.priority)}</span>
+        </Property>
+        <Property label="Labels" icon={<Tag className="size-3.5" />}>
+          {task.labels.length ? task.labels.map((label) => <span key={label.id} className="inline-flex h-5 items-center rounded-[var(--taskspace-radius-chip)] bg-[var(--taskspace-paper)] px-1.5 text-[0.62rem] font-extrabold text-[var(--taskspace-cobalt-deep)]">{label.name}</span>) : "No labels"}
+        </Property>
       </dl>
 
-      {canEdit ? <div className="flex flex-col gap-2 border-y border-border py-3"><label className="text-xs font-semibold" htmlFor={`assignee-${task.id}`}>Assignee</label><select id={`assignee-${task.id}`} value={task.owner?.id ?? ""} onChange={(event) => void assignTaskAction(task.id, event.target.value || null).then((result) => { if (!result.ok) toast.error(result.error.message); else router.refresh(); })} className="rounded-md border border-input bg-background px-2 py-1.5 text-sm"><option value="">No assignee</option>{members.map((member) => <option key={member.id} value={member.id}>{member.name}</option>)}</select><fieldset><legend className="text-xs font-semibold">Labels</legend><div className="mt-1 flex flex-wrap gap-2">{availableLabels.map((label) => <span key={label.id} className="inline-flex items-center gap-1 text-xs"><input type="checkbox" aria-label={`Apply ${label.name}`} defaultChecked={task.labels.some((item) => item.id === label.id)} onChange={(event) => { const next = event.currentTarget.checked ? [...task.labels.map((item) => item.id), label.id] : task.labels.filter((item) => item.id !== label.id).map((item) => item.id); void setTaskLabelsAction(task.id, next).then((result) => { if (!result.ok) toast.error(result.error.message); else router.refresh(); }); }} /><button type="button" className="underline" onClick={() => { const name = window.prompt("Rename label", label.name); if (name?.trim()) void updateLabelAction(label.id, { name }).then((result) => { if (!result.ok) toast.error(result.error.message); else router.refresh(); }); }}>{label.name}</button><button type="button" aria-label={`Delete label ${label.name}`} className="text-muted-foreground" onClick={() => void deleteLabelAction(label.id).then((result) => { if (!result.ok) toast.error(result.error.message); else router.refresh(); })}>×</button></span>)}</div><form onSubmit={createLabel} className="mt-2 flex gap-2"><label className="sr-only" htmlFor={`label-${task.id}`}>New label</label><input id={`label-${task.id}`} value={labelName} onChange={(event) => setLabelName(event.target.value)} className="min-w-0 flex-1 rounded-md border border-input bg-background px-2 py-1 text-sm" placeholder="New label" /><button className="rounded-md bg-primary px-2 py-1 text-xs font-semibold text-primary-foreground">Create</button></form></fieldset></div> : null}
+      {canEdit && editing ? <form onSubmit={(event) => { event.preventDefault(); const data = new FormData(event.currentTarget); void update({ title: String(data.get("title")), description: String(data.get("description")) || null, priority: String(data.get("priority")) as TaskRowData["priority"], scheduledFor: data.get("scheduledFor") ? new Date(String(data.get("scheduledFor"))) : null }); }} className="grid gap-2 border-b border-border pb-[14px]"><label className="text-xs font-bold text-[var(--taskspace-muted)]" htmlFor={`title-${task.id}`}>Edit task</label><input id={`title-${task.id}`} name="title" defaultValue={task.title} className="h-[34px] rounded-[var(--taskspace-radius-input)] border border-input bg-background px-2 text-[0.72rem]" /><textarea name="description" defaultValue={task.description ?? ""} className="min-h-20 rounded-[var(--taskspace-radius-input)] border border-input bg-background px-2 py-2 text-[0.72rem]" /><div className="grid grid-cols-2 gap-2"><select name="priority" defaultValue={task.priority} className="h-[34px] rounded-[var(--taskspace-radius-input)] border border-input bg-background px-2 text-[0.72rem]"><option value="p1">P1</option><option value="p2">P2</option><option value="p3">P3</option><option value="p4">P4</option></select><input name="scheduledFor" type="date" defaultValue={task.scheduledFor?.slice(0, 10) ?? ""} className="h-[34px] rounded-[var(--taskspace-radius-input)] border border-input bg-background px-2 text-[0.72rem]" /></div><button disabled={saving} className="h-[34px] justify-self-start rounded-[var(--taskspace-radius-input)] bg-primary px-3 text-xs font-bold text-primary-foreground">Save changes</button></form> : null}
+
+      {canEdit && editing ? <div className="border-b border-border pb-[14px]"><button type="button" aria-expanded={managingLabels} onClick={() => setManagingLabels((value) => !value)} className="text-xs font-bold text-[var(--taskspace-cobalt)] hover:text-[var(--taskspace-cobalt-deep)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--taskspace-coral)]">{managingLabels ? "Close task properties" : "Edit assignee and labels"}</button>{managingLabels ? <div className="mt-2 grid gap-2"><select id={`assignee-${task.id}`} value={task.owner?.id ?? ""} onChange={(event) => void assignTaskAction(task.id, event.target.value || null).then((result) => { if (!result.ok) toast.error(result.error.message); else router.refresh(); })} className="h-[34px] rounded-[var(--taskspace-radius-input)] border border-input bg-background px-2 text-[0.72rem]"><option value="">No assignee</option>{members.map((member) => <option key={member.id} value={member.id}>{member.name}</option>)}</select><fieldset><legend className="text-xs font-bold text-[var(--taskspace-muted)]">Labels</legend><div className="mt-1 flex flex-wrap gap-2">{availableLabels.map((label) => <span key={label.id} className="inline-flex items-center gap-1 text-xs"><input type="checkbox" aria-label={`Apply ${label.name}`} checked={task.labels.some((item) => item.id === label.id)} onChange={(event) => { const next = event.currentTarget.checked ? [...task.labels.map((item) => item.id), label.id] : task.labels.filter((item) => item.id !== label.id).map((item) => item.id); void setTaskLabelsAction(task.id, next).then((result) => { if (!result.ok) toast.error(result.error.message); else router.refresh(); }); }} /><button type="button" className="underline" onClick={() => { const name = window.prompt("Rename label", label.name); if (name?.trim()) void updateLabelAction(label.id, { name }).then((result) => { if (!result.ok) toast.error(result.error.message); else router.refresh(); }); }}>{label.name}</button><button type="button" aria-label={`Delete label ${label.name}`} className="text-muted-foreground" onClick={() => void deleteLabelAction(label.id).then((result) => { if (!result.ok) toast.error(result.error.message); else router.refresh(); })}>×</button></span>)}</div><form onSubmit={createLabel} className="mt-2 flex gap-2"><label className="sr-only" htmlFor={`label-${task.id}`}>New label</label><input id={`label-${task.id}`} value={labelName} onChange={(event) => setLabelName(event.target.value)} className="h-[34px] min-w-0 flex-1 rounded-[var(--taskspace-radius-input)] border border-input bg-background px-2 text-[0.72rem]" placeholder="New label" /><button className="h-[34px] rounded-[var(--taskspace-radius-input)] bg-primary px-3 text-xs font-bold text-primary-foreground">Create</button></form></fieldset></div> : null}</div> : null}
 
       <section className="border-t border-border pt-4">
         <h3 className="text-sm font-semibold">Subtasks</h3>

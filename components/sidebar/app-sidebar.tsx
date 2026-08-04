@@ -3,7 +3,6 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useSearchParams } from "next/navigation";
 import {
   CalendarClock,
   CheckCircle2,
@@ -45,8 +44,8 @@ import {
  * brand, muted-periwinkle labels and translucent-white hover/active fills.
  */
 const workspaceItems = [
-  { title: "Today", icon: ListTodo, href: "/?view=today" },
   { title: "Inbox", icon: Inbox, href: "/?view=inbox" },
+  { title: "Today", icon: ListTodo, href: "/?view=today" },
   { title: "Upcoming", icon: CalendarClock, href: "/?view=upcoming" },
   { title: "Search", icon: CheckCircle2, href: "/?view=search" },
 ];
@@ -126,23 +125,17 @@ export function AppSidebar({
   user: User;
   children: React.ReactNode;
 }) {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-
-  function captureTask() {
-    if (searchParams.get("project")) {
-      window.dispatchEvent(new Event("taskspace:new-task"));
-      return;
-    }
-    router.push("/?view=inbox");
+  function openProject() {
+    window.dispatchEvent(new Event("taskspace:new-project"));
   }
 
   return (
-    <Sidebar className="border-r border-white/10 md:inset-y-5 md:left-5 md:h-[calc(100svh-2.5rem)] md:rounded-l-[18px]" collapsible="offcanvas">
+    <Sidebar className="border-r border-white/10 md:inset-y-5 md:left-5 md:h-[calc(100svh-2.5rem)] md:rounded-l-[var(--taskspace-radius-shell)]" collapsible="offcanvas">
       <SidebarHeader className="px-4 pb-3 pt-5">
         <div className="flex items-center gap-2.5 px-2">
-          <span className="flex size-8 items-center justify-center rounded-xl bg-white font-bold text-[#202550] shadow-[0_8px_18px_-12px_rgba(10,10,40,0.9)]">
-            T
+          <span className="relative flex size-8 items-center justify-center" aria-hidden="true">
+            <span className="absolute size-4 rotate-45 rounded-[var(--taskspace-radius-chip)] bg-[var(--taskspace-citron)]" />
+            <span className="relative size-2.5 rounded-full bg-[var(--taskspace-cobalt)] ring-2 ring-white/80" />
           </span>
           <span className="text-sm font-extrabold tracking-[-0.04em] text-white">
             Taskspace
@@ -156,14 +149,14 @@ export function AppSidebar({
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton
-                  data-nav="create"
-                  className="h-11 gap-3 rounded-xl border border-white/25 bg-white/10 px-3 text-[0.75rem] font-[760] text-white hover:bg-white/20 hover:text-white data-[active=true]:border-white/25 data-[active=true]:bg-white/20 data-[active=true]:text-white"
-                  onClick={captureTask}
+                  data-nav="create-project"
+                  className="h-10 gap-3 rounded-[var(--taskspace-radius-control)] border border-white/25 bg-white/10 px-3 text-[0.75rem] font-[760] text-white transition-colors hover:bg-white/20 hover:text-white data-[active=true]:border-white/25 data-[active=true]:bg-white/20 data-[active=true]:text-white"
+                  onClick={openProject}
                 >
                   <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-[#edff81] text-[#202550]">
                     <Plus className="size-4" strokeWidth={2.75} />
                   </span>
-                  <span>Add task</span>
+                  <span>New project</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
@@ -201,11 +194,12 @@ export function AppSidebar({
         </SidebarGroup>
 
         {children}
+
       </SidebarContent>
 
       <SidebarFooter className="px-3 pb-4">
         <MembersSection meUserId={user.id} />
-        <div className="rounded-2xl border border-white/10 bg-white/[0.06] p-1.5">
+        <div className="border-t border-white/10 pt-2">
           <UserMenu user={user} />
         </div>
       </SidebarFooter>

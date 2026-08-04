@@ -61,6 +61,13 @@
   --taskspace-citron: #edff81;
   --taskspace-coral: #ff765d;
   --taskspace-completion-green: #3b8b69;
+  --taskspace-radius-chip: 5px;
+  --taskspace-radius-input: 6px;
+  --taskspace-radius-control: 8px;
+  --taskspace-radius-panel: 10px;
+  --taskspace-radius-dialog: 15px;
+  --taskspace-radius-shell: 18px;
+  --taskspace-shell-shadow: 0 30px 70px -44px #191c5366;
   --taskspace-mobile-sheet: 0 -20px 50px -35px #1c1f4a8c;
   --background: var(--taskspace-paper);
   --foreground: var(--taskspace-ink);
@@ -142,5 +149,91 @@
   }
   html {
     @apply font-sans;
+  }
+}
+
+/* The workboard mirrors the reference topology: a broad task list and an
+   adjacent record stay together through tablet widths; only the smallest
+   viewport turns the record into its bottom sheet. */
+.taskspace-workboard {
+  min-width: 0;
+}
+
+.taskspace-shell {
+  min-height: 100svh;
+}
+
+.taskspace-topbar {
+  position: relative;
+}
+
+.taskspace-topbar::before {
+  width: 6px;
+  height: 6px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--taskspace-citron);
+  content: "";
+}
+
+.taskspace-record {
+  align-self: start;
+}
+
+@media (min-width: 621px) {
+  .taskspace-record {
+    position: sticky;
+    top: 0;
+    max-height: 100svh;
+    overflow-y: auto;
+  }
+}
+
+@media (min-width: 1051px) {
+  .taskspace-workboard--with-detail {
+    display: grid;
+    gap: 0;
+    grid-template-columns: minmax(420px, 1fr) minmax(330px, 0.62fr);
+  }
+}
+
+@media (min-width: 801px) and (max-width: 1050px) {
+  .taskspace-workboard--with-detail {
+    display: grid;
+    gap: 0;
+    grid-template-columns: minmax(370px, 1fr) minmax(290px, 0.67fr);
+  }
+}
+
+@media (min-width: 621px) and (max-width: 800px) {
+  .taskspace-workboard--with-detail {
+    display: grid;
+    gap: 0;
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 0.55fr);
+  }
+}
+
+.taskspace-sidebar-trigger {
+  display: inline-flex;
+}
+
+@media (min-width: 801px) {
+  .taskspace-sidebar-trigger {
+    display: none;
+  }
+}
+
+@media (max-width: 620px) {
+  .taskspace-workboard--with-detail {
+    display: block;
+  }
+
+  .taskspace-topbar::before {
+    width: 15px;
+    height: 15px;
+    border-radius: var(--taskspace-radius-chip);
+    background: var(--taskspace-cobalt);
+    box-shadow: 6px 6px 0 -3px var(--taskspace-citron);
+    transform: rotate(45deg);
   }
 }

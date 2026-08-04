@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import {
   ChevronDown,
   ChevronUp,
-  Check,
   ListChecks,
   Pencil,
   Plus,
@@ -30,6 +29,25 @@ import {
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { ProjectHeader } from "@/components/projects/project-header";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { TaskDetailRecord } from "./task-detail-record";
 import { TaskRow } from "./task-row";
 import type { TaskGroup, TaskRowData } from "./types";
@@ -78,14 +96,16 @@ export function Taskspace({
   canModerateComments?: boolean;
 }) {
   const router = useRouter();
-  const isMobile = useIsMobile();
+  // The task record remains next to its list through tablet widths. It only
+  // becomes a sheet at the design system's dedicated 620px sheet breakpoint.
+  const isMobile = useIsMobile(620);
   const [state, setState] = React.useState(groups);
   const [selectedId, setSelectedId] = React.useState<string | null>(() => {
     for (const group of groups) {
       const active = group.tasks.find((task) => task.status === "active");
       if (active) return active.id;
     }
-    return groups[0]?.tasks[0]?.id ?? null;
+    return null;
   });
   const [composingKey, setComposingKey] = React.useState<string | null>(null);
   const [draft, setDraft] = React.useState("");
@@ -103,19 +123,26 @@ export function Taskspace({
     null,
   );
 
-  React.useEffect(() => {
-    const openComposer = () => {
-      const firstGroup = state.find((group) => group.sectionId !== null) ?? state[0];
-      if (!firstGroup) {
-        setCreatingSection(true);
-        return;
-      }
-      setComposingKey(firstGroup.key);
-      setDraft("");
-    };
-    window.addEventListener("taskspace:new-task", openComposer);
-    return () => window.removeEventListener("taskspace:new-task", openComposer);
+  /**
+   * Keep creation feeling immediate. The server action remains authoritative,
+   * but a temporary row/section appears at once and is replaced by its real
+   * record as soon as the action returns.
+   */
+  const openQuickAdd = React.useCallback(() => {
+    const firstGroup =
+      state.find((group) => group.sectionId !== null) ?? state[0];
+    if (!firstGroup) {
+      setCreatingSection(true);
+      return;
+    }
+    setComposingKey(firstGroup.key);
+    setDraft("");
   }, [state]);
+
+  React.useEffect(() => {
+    window.addEventListener("taskspace:new-task", openQuickAdd);
+    return () => window.removeEventListener("taskspace:new-task", openQuickAdd);
+  }, [openQuickAdd]);
 
   // Re-sync whenever the server sends a fresh snapshot (after a create /
   // toggle triggers `router.refresh()`), without resetting the selection.
@@ -130,7 +157,7 @@ export function Taskspace({
   let selected: { task: TaskRowData; sectionName: string } | null = null;
   for (const group of state) {
     const task = group.tasks.find((t) => t.id === selectedId);
-    if (task) {
+    if (task && (showCompleted || task.status === "active")) {
       selected = { task, sectionName: group.label };
       break;
     }
@@ -178,6 +205,9 @@ export function Taskspace({
         ),
       })),
     );
+    if (complete && !showCompleted && selectedId === taskId) {
+      setSelectedId(null);
+    }
     withBusy(taskId, async () => {
       const res = complete
         ? await completeTaskAction(taskId)
@@ -220,17 +250,66 @@ export function Taskspace({
     const group = state.find((g) => g.key === composingKey);
     if (!group) return;
 
+    const pendingId = `__pending_task_${Date.now()}`;
+    const pendingTask: TaskRowData = {
+      id: pendingId,
+      title,
+      description: null,
+      status: "active",
+      priority: "p4",
+      labels: [],
+      sectionId: group.sectionId,
+      scheduledFor: null,
+      overdue: false,
+      owner: null,
+    };
+    setState((prev) =>
+      prev.map((item) =>
+        item.key === group.key
+          ? { ...item, tasks: [...item.tasks, pendingTask] }
+          : item,
+      ),
+    );
     setComposingKey(null);
     setDraft("");
+    setSelectedId(pendingId);
     withBusy("__create__", async () => {
       const res = await createTaskAction(projectId, {
         title,
         sectionId: group.sectionId,
       });
       if (!res.ok) {
+        setState((prev) =>
+          prev.map((item) => ({
+            ...item,
+            tasks: item.tasks.filter((task) => task.id !== pendingId),
+          })),
+        );
+        setSelectedId((current) => (current === pendingId ? null : current));
         toast.error(res.error.message ?? "Couldn't add the task.");
         return;
       }
+      const task: TaskRowData = {
+        id: res.data.id,
+        title: res.data.title,
+        description: res.data.description,
+        status: res.data.status,
+        priority: res.data.priority,
+        labels: [],
+        sectionId: res.data.sectionId,
+        parentTaskId: res.data.parentTaskId,
+        scheduledFor: res.data.scheduledFor?.toISOString() ?? null,
+        overdue: false,
+        owner: null,
+      };
+      setState((prev) =>
+        prev.map((item) => ({
+          ...item,
+          tasks: item.tasks.map((itemTask) =>
+            itemTask.id === pendingId ? task : itemTask,
+          ),
+        })),
+      );
       setSelectedId(res.data.id);
       toast.success("Task added");
       router.refresh();
@@ -241,10 +320,34 @@ export function Taskspace({
     event.preventDefault();
     const name = sectionDraft.trim();
     if (!name) return;
+    const pendingKey = `__pending_section_${Date.now()}`;
     setSectionDraft("");
-    runSectionAction("__new_section__", () =>
-      createSectionAction(projectId, { name }),
-    );
+    setCreatingSection(false);
+    setState((prev) => [
+      ...prev,
+      { key: pendingKey, sectionId: pendingKey, label: name, tasks: [] },
+    ]);
+    withBusy("__new_section__", async () => {
+      const result = await createSectionAction(projectId, { name });
+      if (!result.ok) {
+        setState((prev) => prev.filter((group) => group.key !== pendingKey));
+        toast.error(result.error.message ?? "Couldn't create the section.");
+        return;
+      }
+      setState((prev) =>
+        prev.map((group) =>
+          group.key === pendingKey
+            ? {
+                ...group,
+                key: result.data.id,
+                sectionId: result.data.id,
+              }
+            : group,
+        ),
+      );
+      toast.success("Section added");
+      router.refresh();
+    });
   }
 
   function submitRename(event: React.FormEvent<HTMLFormElement>) {
@@ -257,13 +360,52 @@ export function Taskspace({
   }
 
   function confirmDeleteSection(sectionId: string) {
-    if (confirmingDelete === sectionId) {
-      runSectionAction(`__delete_${sectionId}`, () =>
-        removeSectionAction(sectionId),
+    setConfirmingDelete(sectionId);
+  }
+
+  /** Remove the section at once, while preserving its tasks in No section. */
+  function deleteSection(section: TaskGroup) {
+    if (!section.sectionId || busyIds.has(`__delete_${section.sectionId}`)) return;
+    const previous = state;
+    const sectionId = section.sectionId;
+    setConfirmingDelete(null);
+    setState((current) => {
+      const remaining = current.filter((group) => group.sectionId !== sectionId);
+      if (!section.tasks.length) return remaining;
+      const releasedTasks = section.tasks.map((task) => ({
+        ...task,
+        sectionId: null,
+      }));
+      const catchAllIndex = remaining.findIndex(
+        (group) => group.sectionId === null,
       );
-    } else {
-      setConfirmingDelete(sectionId);
-    }
+      if (catchAllIndex === -1) {
+        return [
+          ...remaining,
+          {
+            key: "unsectioned",
+            sectionId: null,
+            label: projectName,
+            tasks: releasedTasks,
+          },
+        ];
+      }
+      return remaining.map((group, index) =>
+        index === catchAllIndex
+          ? { ...group, tasks: [...group.tasks, ...releasedTasks] }
+          : group,
+      );
+    });
+    withBusy(`__delete_${sectionId}`, async () => {
+      const result = await removeSectionAction(sectionId);
+      if (!result.ok) {
+        setState(previous);
+        toast.error(result.error.message ?? "Couldn't delete the section.");
+        return;
+      }
+      toast.success("Section deleted");
+      router.refresh();
+    });
   }
 
   /** Move a real section up/down and persist the new order. */
@@ -303,12 +445,35 @@ export function Taskspace({
   // all — a section that the editor just created shows even while it holds zero
   // tasks, so the New section control stays visible instead of being masked.
   const hasSections = state.some((group) => group.sectionId != null);
-  const hasTasks = state.some((group) => group.tasks.some((task) => task.status === "active"));
-  const isEmpty = !hasSections && !hasTasks;
+  const hasActiveTasks = state.some((group) =>
+    group.tasks.some((task) => task.status === "active"),
+  );
+  const isEmpty = !hasSections && !hasActiveTasks;
+  // Completed-only projects should not render a stack of identical empty
+  // sections. Keep a single calm entry point until the user opens completion
+  // history or starts a new task.
+  const isQuiet = !isEmpty && !showCompleted && !hasActiveTasks && !composingKey;
+  const groupsToRender =
+    !showCompleted && !hasActiveTasks && composingKey
+      ? state.filter((group) => group.key === composingKey)
+      : state;
+  const sectionPendingDeletion = confirmingDelete
+    ? state.find((group) => group.sectionId === confirmingDelete) ?? null
+    : null;
+  const sectionPendingRename = renamingId
+    ? state.find((group) => group.sectionId === renamingId) ?? null
+    : null;
 
   return (
-    <div className="grid min-h-[calc(100svh-13rem)] gap-0 lg:grid-cols-[minmax(0,1fr)_minmax(330px,.62fr)]">
+    <div
+      className={cn(
+        "taskspace-workboard min-h-[calc(100svh-13rem)]",
+        selected && "taskspace-workboard--with-detail",
+      )}
+    >
       <div className="min-w-0">
+        <ProjectHeader userId={meUserId ?? ""} />
+        <div className="px-4 pb-12 pt-6 sm:px-9">
         {isEmpty ? (
           <div className="flex flex-col items-start gap-3 border-y border-dashed border-border py-10">
             <span className="flex size-10 items-center justify-center rounded-full bg-muted text-muted-foreground">
@@ -322,82 +487,64 @@ export function Taskspace({
               tasks with &ldquo;+ Add task&rdquo;.
             </p>
           </div>
+        ) : isQuiet ? (
+          <section className="border-y border-border py-6" aria-label="Open work">
+            <h2 className="text-sm font-semibold tracking-[-0.025em] text-[var(--taskspace-ink)] dark:text-foreground">
+              No open work
+            </h2>
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <p className="text-xs leading-5 text-[var(--taskspace-muted)] dark:text-muted-foreground">
+                Completed tasks are kept below when you need them.
+              </p>
+              {canEdit ? (
+                <button
+                  type="button"
+                  onClick={openQuickAdd}
+                  className="inline-flex items-center gap-1 text-xs font-bold text-[var(--taskspace-cobalt)] focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[var(--taskspace-coral)]"
+                >
+                  <Plus className="size-3.5" />
+                  Add task
+                </button>
+              ) : null}
+            </div>
+          </section>
         ) : (
           <div className="flex flex-col">
-            {state.map((group) => {
+            {groupsToRender.map((group) => {
               const visibleTasks = showCompleted
                 ? group.tasks
                 : group.tasks.filter((task) => task.status === "active");
-              const isRealSection = group.sectionId != null;
+              const isPendingSection = group.key.startsWith("__pending_section_");
+              const isRealSection = group.sectionId != null && !isPendingSection;
               const sectionIds = state
                 .filter((g) => g.sectionId != null)
                 .map((g) => g.sectionId as string);
               const sectionIndex = sectionIds.indexOf(group.sectionId as string);
               const isFirst = sectionIndex === 0;
               const isLast = sectionIndex === sectionIds.length - 1;
-              const renamingThis = renamingId === group.sectionId;
-              const deletingThis = confirmingDelete === group.sectionId;
-
               return (
                 <section key={group.key} aria-label={group.label}>
-                  <header className="flex items-center justify-between gap-3 border-b border-[#dfe2ef] py-2.5 dark:border-[#2a2f4a]">
-                    <div className="flex min-w-0 items-baseline gap-2">
-                      {renamingThis ? (
-                        <form
-                          onSubmit={submitRename}
-                          className="flex w-full items-center gap-2"
-                        >
-                          <input
-                            autoFocus
-                            value={renameDraft}
-                            onChange={(event) => setRenameDraft(event.target.value)}
-                            onKeyDown={(event) => {
-                              if (event.key === "Escape") {
-                                setRenamingId(null);
-                              }
-                            }}
-                            aria-label="Rename section"
-                            className="h-7 w-full rounded-md border border-input bg-background px-2 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-[#ff765d]"
-                          />
-                          <button
-                            type="submit"
-                            aria-label="Save section name"
-                            className={cn(CONTROL_CLASS)}
-                          >
-                            <Check className="size-4" />
-                          </button>
-                          <NoiseButton
-                            aria-label="Cancel rename"
-                            onClick={() => setRenamingId(null)}
-                          >
-                            <X className="size-4" />
-                          </NoiseButton>
-                        </form>
-                      ) : (
-                        <>
-                          <h2
-                            className={cn(
-                              "truncate font-semibold tracking-[-0.025em]",
-                              group.sectionId != null
-                                ? "text-sm text-[#202550] dark:text-foreground"
-                                : "text-xs uppercase tracking-[0.07em] text-[#8790ac] dark:text-muted-foreground",
-                            )}
-                          >
-                            {group.sectionId != null
-                              ? group.label
-                              : "No section"}
-                          </h2>
-                          <span className="shrink-0 text-xs font-bold text-[#8790ac] dark:text-muted-foreground">
-                            {visibleTasks.length}{" "}
-                            {visibleTasks.length === 1 ? "task" : "tasks"}
-                          </span>
-                        </>
-                      )}
+                  <header className="group flex items-center justify-between gap-3 border-b border-border py-3 first:pt-0">
+                    <div className="flex min-w-0 flex-1 items-baseline gap-2">
+                      <h2
+                        className={cn(
+                          "truncate font-semibold tracking-[-0.025em]",
+                          group.sectionId != null
+                            ? "text-sm text-[var(--taskspace-ink)] dark:text-foreground"
+                            : "text-xs uppercase tracking-[0.07em] text-[var(--taskspace-muted)] dark:text-muted-foreground",
+                        )}
+                      >
+                        {group.sectionId != null ? group.label : "No section"}
+                      </h2>
+                      <span className="shrink-0 text-xs font-bold text-[var(--taskspace-muted)] dark:text-muted-foreground">
+                        {visibleTasks.length}{" "}
+                        {visibleTasks.length === 1 ? "task" : "tasks"}
+                      </span>
                     </div>
 
                     <div className="flex shrink-0 items-center gap-0.5">
-                      {isRealSection && canEdit && !renamingThis ? (
-                        <>
+                      {isRealSection && canEdit ? (
+                        <span className="hidden items-center gap-0.5 sm:flex sm:opacity-0 sm:transition-opacity sm:group-focus-within:opacity-100 sm:group-hover:opacity-100">
                           <button
                             type="button"
                             aria-label={`Move ${group.label} up`}
@@ -433,18 +580,14 @@ export function Taskspace({
                             aria-label={`Delete ${group.label}`}
                             disabled={busyIds.has("__reorder__")}
                             onClick={() => confirmDeleteSection(group.sectionId!)}
-                            className={cn(
-                              CONTROL_CLASS,
-                              deletingThis &&
-                                "text-[#ff765d] hover:bg-[#ff765d]/10 hover:text-[#ff765d]",
-                            )}
+                            className={cn(CONTROL_CLASS)}
                           >
                             <Trash2 className="size-4" />
                           </button>
-                        </>
+                        </span>
                       ) : null}
 
-                      {canEdit && !renamingThis ? (
+                      {canEdit && !isPendingSection ? (
                         <button
                           type="button"
                           onClick={() => {
@@ -453,7 +596,7 @@ export function Taskspace({
                             );
                             if (composingKey !== group.key) setDraft("");
                           }}
-                          className="ml-1 flex items-center gap-1 rounded-md border-0 bg-transparent p-1 text-xs font-bold text-[#5965bd] transition-colors hover:text-[#252d95] focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[#ff765d] dark:text-[#8b93d6] dark:hover:text-[#c3c9ff]"
+                          className="ml-1 flex items-center gap-1 rounded-[var(--taskspace-radius-input)] bg-[var(--taskspace-periwinkle-pale)] px-2 py-1 text-xs font-bold text-[var(--taskspace-cobalt)] transition-colors hover:bg-[var(--taskspace-canvas)] hover:text-[var(--taskspace-cobalt-deep)] focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[var(--taskspace-coral)]"
                         >
                           <Plus className="size-3.5" />
                           Add task
@@ -462,37 +605,11 @@ export function Taskspace({
                     </div>
                   </header>
 
-                  {deletingThis ? (
-                    <div className="mb-3 flex items-center justify-between gap-3 rounded-lg border border-[#ff765d]/40 bg-[#ff765d]/5 px-3 py-2">
-                      <p className="text-xs leading-5 text-muted-foreground">
-                        Its tasks will move to the project&apos;s &ldquo;No
-                        section&rdquo; bucket.
-                      </p>
-                      <div className="flex shrink-0 items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => confirmDeleteSection(group.sectionId!)}
-                          disabled={busyIds.has(`__delete_${group.sectionId}`)}
-                          className="rounded-md bg-[#ff765d] px-2 py-1 text-xs font-bold text-white hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff765d] focus-visible:ring-offset-1"
-                        >
-                          Delete
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setConfirmingDelete(null)}
-                          className="rounded-md px-2 py-1 text-xs font-bold text-muted-foreground hover:bg-muted"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
-                  ) : null}
-
                   {composingKey === group.key && canEdit ? (
                     <form onSubmit={submitQuickAdd} className="pb-3">
-                      <div className="flex items-center gap-2 rounded-lg border border-input bg-background px-2.5 py-1.5 focus-within:ring-3 focus-within:ring-[#ff765d]/40">
+                    <div className="flex items-center gap-2 border-b border-input bg-[var(--taskspace-periwinkle-pale)]/50 px-2.5 py-2 focus-within:ring-3 focus-within:ring-[var(--taskspace-coral)]/40">
                         <Plus
-                          className="size-4 shrink-0 text-[#edff81] mix-blend-multiply dark:mix-blend-screen"
+                          className="size-4 shrink-0 text-[var(--taskspace-cobalt)]"
                         />
                         <input
                           autoFocus
@@ -507,7 +624,7 @@ export function Taskspace({
                         />
                         <button
                           type="submit"
-                          className="rounded-md px-2 py-0.5 text-xs font-bold text-[#5963ae] hover:bg-muted"
+                          className="rounded-[var(--taskspace-radius-input)] bg-[var(--taskspace-cobalt)] px-2 py-1 text-xs font-bold text-white hover:bg-[var(--taskspace-cobalt-deep)]"
                         >
                           Add
                         </button>
@@ -516,7 +633,7 @@ export function Taskspace({
                   ) : null}
 
                   {visibleTasks.length > 0 ? (
-                    <div className="flex flex-col border-t border-[#ebedf4]">
+                  <div className="flex flex-col border-t border-border">
                       {visibleTasks.map((task) => (
                         <TaskRow
                           key={task.id}
@@ -532,33 +649,39 @@ export function Taskspace({
                         />
                       ))}
                     </div>
-                  ) : (
-                    composingKey !== group.key &&
-                    !deletingThis && (
-                      <p className="px-1 py-4 text-[0.72rem] text-[#8189a4] dark:text-muted-foreground">
+                  ) : groupsToRender.length === 1 ? (
+                    composingKey !== group.key ? (
+                      <p className="px-1 py-4 text-[0.72rem] text-[var(--taskspace-muted)] dark:text-muted-foreground">
                         No open work in this section.
                       </p>
-                    )
-                  )}
+                    ) : null
+                  ) : null}
                 </section>
               );
             })}
           </div>
         )}
 
-        {state.some((group) => group.tasks.some((task) => task.status === "completed")) ? <button type="button" onClick={() => setShowCompleted((value) => !value)} className="mt-6 rounded-md px-1 py-1 text-xs font-bold text-[#5963ae] hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff765d]">{showCompleted ? "Hide completed tasks" : "Show completed tasks"}</button> : null}
+        {state.some((group) => group.tasks.some((task) => task.status === "completed")) ? <button type="button" onClick={() => setShowCompleted((value) => !value)} className="mt-5 inline-flex rounded-[var(--taskspace-radius-input)] bg-[var(--taskspace-periwinkle-pale)] px-2.5 py-1.5 text-xs font-bold text-[var(--taskspace-cobalt)] transition-colors hover:bg-[var(--taskspace-canvas)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--taskspace-coral)]">{showCompleted ? "Hide completed tasks" : "Show completed tasks"}</button> : null}
 
         {canEdit ? (
-          <div className={cn("mt-7", isEmpty && "mt-5")}>
+          <div className={cn("mt-5", isEmpty && "mt-5")}>
             {creatingSection ? (
               <form
                 onSubmit={submitCreateSection}
-                className="flex w-full items-center gap-2 rounded-lg border border-[#d7dcf1] bg-[#eef0ff]/50 px-2.5 py-1.5 focus-within:ring-3 focus-within:ring-[#ff765d]/40 dark:bg-[#eef0ff]/10"
+                className="flex w-full items-center gap-2 border-y border-border bg-[var(--taskspace-periwinkle-pale)]/50 px-2.5 py-1.5 focus-within:ring-3 focus-within:ring-[var(--taskspace-coral)]/40 dark:bg-[var(--taskspace-periwinkle-pale)]/10"
               >
                 <Plus
-                  className="size-4 shrink-0 text-[#5963ae] dark:text-[#8b93d6]"
+                  className="size-4 shrink-0 text-[var(--taskspace-cobalt)]"
                 />
+                <label
+                  htmlFor="new-section-name"
+                  className="shrink-0 text-xs font-bold text-[var(--taskspace-muted)]"
+                >
+                  New section
+                </label>
                 <input
+                  id="new-section-name"
                   autoFocus
                   value={sectionDraft}
                   onChange={(event) => setSectionDraft(event.target.value)}
@@ -574,9 +697,9 @@ export function Taskspace({
                 />
                 <button
                   type="submit"
-                  className="rounded-md px-2 py-0.5 text-xs font-bold text-[#5963ae] hover:bg-[#dfe3ff] dark:hover:bg-[#ffffff12]"
+                  className="rounded-[var(--taskspace-radius-input)] px-2 py-0.5 text-xs font-bold text-[var(--taskspace-cobalt)] hover:bg-muted"
                 >
-                  Add section
+                  Create
                 </button>
                 <button
                   type="button"
@@ -595,7 +718,7 @@ export function Taskspace({
                 type="button"
                 disabled={busyIds.has("__reorder__")}
                 onClick={() => setCreatingSection(true)}
-                className="flex items-center gap-1.5 rounded-md border-0 bg-transparent p-0 text-[0.72rem] font-bold text-[#5965bd] transition-colors hover:text-[#252d95] focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[#ff765d] focus-visible:ring-offset-2 dark:text-[#8b93d6] dark:hover:text-[#c3c9ff]"
+                className="flex items-center gap-1.5 rounded-[var(--taskspace-radius-input)] bg-[var(--taskspace-periwinkle-pale)] px-2.5 py-1.5 text-[0.72rem] font-bold text-[var(--taskspace-cobalt)] transition-colors hover:bg-[var(--taskspace-canvas)] hover:text-[var(--taskspace-cobalt-deep)] focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[var(--taskspace-coral)] focus-visible:ring-offset-2"
               >
                 <Plus className="size-3.5" />
                 New section
@@ -603,9 +726,94 @@ export function Taskspace({
             )}
           </div>
         ) : null}
+        </div>
       </div>
 
+      <Dialog
+        open={sectionPendingRename !== null}
+        onOpenChange={(open) => {
+          if (!open) setRenamingId(null);
+        }}
+      >
+        <DialogContent showCloseButton={false}>
+          <form onSubmit={submitRename} className="grid gap-4">
+            <DialogHeader>
+              <DialogTitle>Rename section</DialogTitle>
+              <DialogDescription>
+                Give this group of work a clear, scannable name.
+              </DialogDescription>
+            </DialogHeader>
+            <label className="grid gap-1.5 text-xs font-bold text-[var(--taskspace-muted)]" htmlFor="section-name">
+              Section name
+              <input
+                id="section-name"
+                autoFocus
+                value={renameDraft}
+                onChange={(event) => setRenameDraft(event.target.value)}
+                placeholder="Section name"
+                className="h-[34px] rounded-[var(--taskspace-radius-input)] border border-input bg-background px-2 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-[var(--taskspace-coral)]"
+              />
+            </label>
+            <DialogFooter>
+              <button
+                type="button"
+                onClick={() => setRenamingId(null)}
+                className="h-[34px] rounded-[var(--taskspace-radius-input)] border border-border bg-background px-3 text-xs font-bold text-muted-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--taskspace-coral)]"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={!sectionPendingRename || busyIds.has(`__rename_${renamingId}`)}
+                className="h-[34px] rounded-[var(--taskspace-radius-input)] bg-primary px-3 text-xs font-bold text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--taskspace-coral)]"
+              >
+                Save name
+              </button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog
+        open={sectionPendingDeletion !== null}
+        onOpenChange={(open) => {
+          if (!open) setConfirmingDelete(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Remove {sectionPendingDeletion?.label ?? "this section"}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Its tasks will move to the project&apos;s &ldquo;No section&rdquo;
+              bucket. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setConfirmingDelete(null)}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              type="button"
+              disabled={
+                !sectionPendingDeletion ||
+                busyIds.has(`__delete_${sectionPendingDeletion?.sectionId}`)
+              }
+              onClick={() => {
+                if (!sectionPendingDeletion) return;
+                deleteSection(sectionPendingDeletion);
+              }}
+              className="bg-[var(--taskspace-coral)] text-white hover:bg-[var(--taskspace-coral)]/90 focus-visible:ring-[var(--taskspace-coral)]"
+            >
+              Delete section
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {isMobile ? <Sheet open={!!selected} onOpenChange={(open) => { if (!open) setSelectedId(null); }}><SheetContent side="bottom" className="max-h-[78vh] overflow-y-auto rounded-t-[17px] border-border bg-[var(--taskspace-periwinkle-pale)] p-0 shadow-[var(--taskspace-mobile-sheet)]" aria-label="Task detail">{selected ? <TaskDetailRecord
+            key={selected.task.id}
             task={selected.task}
             projectName={projectName}
             projectId={projectId}
@@ -616,17 +824,9 @@ export function Taskspace({
             availableLabels={labels}
             members={members}
             canModerateComments={canModerateComments}
-          /> : null}</SheetContent></Sheet> : <div className={cn("min-w-0", !selected && "lg:hidden")}>
-        {selected ? <TaskDetailRecord task={selected.task} projectName={projectName} projectId={projectId} sectionName={selected.sectionName} meUserId={meUserId} onDelete={canEdit ? deleteTask : undefined} canEdit={canEdit} availableLabels={labels} members={members} canModerateComments={canModerateComments} /> : null}
-      </div>}
+          /> : null}</SheetContent></Sheet> : selected ? <div className="taskspace-record min-w-0">
+        <TaskDetailRecord key={selected.task.id} task={selected.task} projectName={projectName} projectId={projectId} sectionName={selected.sectionName} meUserId={meUserId} onDelete={canEdit ? deleteTask : undefined} canEdit={canEdit} availableLabels={labels} members={members} canModerateComments={canModerateComments} />
+      </div> : null}
     </div>
   );
-}
-
-/** Tiny icon button using the shared control styling. */
-function NoiseButton({
-  className,
-  ...props
-}: React.ButtonHTMLAttributes<HTMLButtonElement>) {
-  return <button type="button" className={cn(CONTROL_CLASS, className)} {...props} />;
 }

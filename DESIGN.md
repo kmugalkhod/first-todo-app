@@ -150,6 +150,8 @@ The shell narrows at the existing 1050px breakpoint by reducing sidebar and pane
 
 **The Coexisting Context Rule.** On wide screens, preserve the task list and selected record side by side. Do not make the record a route or modal when both can coexist.
 
+The shared component radii are exposed as `--taskspace-radius-chip` (5px), `--taskspace-radius-input` (6px), `--taskspace-radius-control` (8px), and `--taskspace-radius-panel` (10px).
+
 ## Elevation & Depth
 
 This is a mostly flat workspace with structural borders and tonal shifts doing the daily work. Elevation is reserved for the desktop app shell, modal dialog, toast, and mobile detail sheet—transient or floating states that genuinely need separation.
@@ -224,4 +226,3 @@ Borders are thin and cool-toned. Selected task rows gain a soft rounded highligh
 - **Don't** hide task context behind a personal-focus queue or replace the selected record with a full-screen detour on desktop.
 - **Don't** treat coral, citron, and green as interchangeable decoration.
 - **Don't** use the display face for dense metadata, controls, or body copy.
-

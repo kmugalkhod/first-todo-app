@@ -1,8 +1,9 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Archive, ArchiveRestore, Plus } from "lucide-react";
+import { Archive, ArchiveRestore } from "lucide-react";
 import { toast } from "sonner";
 
 import type { ProjectDTO } from "@/lib/data-access";
@@ -50,6 +51,12 @@ export function ProjectNav({
   // refresh (Task 0201 Recommendation: update optimistically after creation).
   const [extras, setExtras] = React.useState<ProjectDTO[]>([]);
 
+  React.useEffect(() => {
+    const openProjectDialog = () => setOpen(true);
+    window.addEventListener("taskspace:new-project", openProjectDialog);
+    return () => window.removeEventListener("taskspace:new-project", openProjectDialog);
+  }, []);
+
   // Server list + optimistic extras, deduped by id (the extras drop out once
   // the refreshed server list includes them).
   const combined = React.useMemo(() => {
@@ -95,38 +102,24 @@ export function ProjectNav({
       </div>
 
       <SidebarGroupContent>
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          className="mb-2 flex h-10 w-full items-center justify-between rounded-lg border border-white/25 bg-white/10 px-3 text-[0.75rem] font-[760] text-white transition-colors hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff765d] focus-visible:ring-offset-2 focus-visible:ring-offset-[#3543d6]"
-        >
-          <span>New project</span>
-          <span
-            aria-hidden="true"
-            className="flex size-[19px] shrink-0 items-center justify-center rounded-full bg-[#edff81] text-[#202550]"
-          >
-            <Plus className="size-3" strokeWidth={3} />
-          </span>
-        </button>
-
         {error ? (
           <p className="px-3 pt-1.5 text-xs leading-5 text-[#ffab9c]">
             {error}
           </p>
         ) : combined.length > 0 ? (
-          <SidebarMenu className="pt-1">
+          <SidebarMenu className="max-h-[204px] overflow-y-auto pt-1 pr-1">
             {combined.map((project) => {
               const active = project.id === activeId;
               return (
                 <SidebarMenuItem key={project.id}>
                   <SidebarMenuButton
                     isActive={active}
-                    onClick={() => router.push(`/?project=${project.id}`)}
-                    className="h-[34px] gap-[9px] rounded-lg px-2.5 text-[0.74rem] font-[650] text-[#e1e3ff] hover:bg-white/10 hover:text-[#e1e3ff] data-[active=true]:bg-white/15"
+                    render={<Link href={`/?project=${project.id}`} />}
+                    className="h-[34px] gap-[9px] rounded-[var(--taskspace-radius-control)] px-2.5 text-[0.74rem] font-[650] text-[#e1e3ff] transition-colors hover:bg-white/10 hover:text-[#e1e3ff] data-[active=true]:bg-white/15"
                   >
                     <span
                       aria-hidden="true"
-                      className="size-[9px] shrink-0 -rotate-45 rounded-[3px] bg-[#edff81]"
+                      className="size-[9px] shrink-0 -rotate-45 rounded-[3px] bg-[var(--taskspace-citron)]"
                     />
                     <span className="min-w-0 flex-1 truncate">
                       {project.name}
@@ -167,7 +160,7 @@ export function ProjectNav({
               <SidebarMenuItem key={project.id}>
                 <SidebarMenuButton
                   isActive={project.id === activeId}
-                  onClick={() => router.push(`/?project=${project.id}`)}
+                  render={<Link href={`/?project=${project.id}`} />}
                   className="h-[34px] gap-[9px] rounded-lg px-2.5 text-[0.74rem] font-[650] text-[#c9cdfd]/85 hover:bg-white/10 hover:text-[#e1e3ff] data-[active=true]:bg-white/15"
                 >
                   <span

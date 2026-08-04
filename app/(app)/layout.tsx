@@ -5,7 +5,6 @@ import { Search } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { listProjectsForActor, type ProjectDTO } from "@/lib/data-access";
 import { AppSidebar } from "@/components/sidebar/app-sidebar";
-import { ProjectHeader } from "@/components/projects/project-header";
 import { ProjectNav } from "@/components/sidebar/project-nav";
 import { TaskCaptureButton } from "@/components/taskspace/task-capture-button";
 import {
@@ -59,14 +58,14 @@ export default async function ProtectedLayout({
   }
 
   return (
-    <SidebarProvider style={{ "--sidebar-width": "238px" } as CSSProperties} className="bg-[var(--taskspace-canvas)] md:p-5">
+    <SidebarProvider style={{ "--sidebar-width": "238px" } as CSSProperties} className="taskspace-shell bg-[var(--taskspace-canvas)] md:p-5">
       <AppSidebar user={user}>
         <ProjectNav projects={projects} archived={archived} error={error} />
       </AppSidebar>
-      <SidebarInset className="min-h-svh bg-background md:min-h-[calc(100svh-2.5rem)] md:rounded-r-[18px] md:shadow-[0_30px_70px_-44px_#191c5366]">
-        <header className="flex min-h-[66px] shrink-0 items-center gap-3 border-b border-border bg-white px-4 sm:px-7">
-          <SidebarTrigger className="size-9 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground md:hidden" />
-          <p className="hidden text-xs font-semibold text-muted-foreground md:block">Projects</p>
+      <SidebarInset className="min-h-svh bg-background md:min-h-[calc(100svh-2.5rem)] md:rounded-r-[var(--taskspace-radius-shell)] md:shadow-[var(--taskspace-shell-shadow)]">
+        <header className="taskspace-topbar flex min-h-[66px] shrink-0 items-center gap-3 border-b border-border bg-[var(--taskspace-paper)] px-4 sm:px-7">
+          <SidebarTrigger className="taskspace-sidebar-trigger size-9 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground" />
+          <p className="hidden text-[0.62rem] font-[760] uppercase tracking-[0.08em] text-muted-foreground md:block">Projects</p>
           <form action="/" className="relative ml-auto w-full max-w-80 sm:w-[min(320px,30vw)]">
             <input type="hidden" name="view" value="search" />
             <label className="sr-only" htmlFor="workspace-search">Search tasks and projects</label>
@@ -76,7 +75,6 @@ export default async function ProtectedLayout({
           <TaskCaptureButton />
         </header>
         <div className="flex-1">
-          <ProjectHeader userId={user.id} />
           {children}
         </div>
       </SidebarInset>
