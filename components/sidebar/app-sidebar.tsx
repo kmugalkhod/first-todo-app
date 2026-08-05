@@ -77,7 +77,7 @@ function UserMenu({ user }: { user: User }) {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className="flex w-full items-center gap-2.5 rounded-xl px-2 py-2 text-left transition-colors hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff765d] focus-visible:ring-offset-2 focus-visible:ring-offset-[#3543d6] data-[popup-open]:bg-white/10">
+      <DropdownMenuTrigger className="flex w-full items-center gap-2.5 rounded-xl px-2 py-2 text-left transition-colors hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--taskspace-coral)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--taskspace-cobalt)] data-[popup-open]:bg-white/10">
         <Avatar className="size-8 shrink-0">
           <AvatarImage src={user.avatarUrl ?? undefined} alt="" />
           <AvatarFallback className="bg-white/20 font-semibold text-white">
@@ -85,10 +85,10 @@ function UserMenu({ user }: { user: User }) {
           </AvatarFallback>
         </Avatar>
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-[0.72rem] font-semibold leading-4 text-white">
+          <span className="block truncate text-[length:var(--taskspace-font-size-body)] font-semibold leading-4 text-white">
             {user.displayName || user.email.split("@")[0] || "You"}
           </span>
-          <span className="mt-0.5 block truncate text-[0.61rem] leading-3.5 text-[#c9cdfd]">
+          <span className="mt-0.5 block truncate text-[length:var(--taskspace-font-size-micro)] leading-3.5 text-[var(--taskspace-on-cobalt-muted)]">
             {user.displayName ? user.email : "Your workspace"}
           </span>
         </span>
@@ -130,7 +130,7 @@ export function AppSidebar({
   }
 
   return (
-    <Sidebar className="border-r border-white/10 md:inset-y-5 md:left-5 md:h-[calc(100svh-2.5rem)] md:rounded-l-[var(--taskspace-radius-shell)]" collapsible="offcanvas">
+    <Sidebar className="border-r border-white/10" collapsible="offcanvas">
       <SidebarHeader className="px-4 pb-3 pt-5">
         <div className="flex items-center gap-2.5 px-2">
           <span className="relative flex size-8 items-center justify-center" aria-hidden="true">
@@ -150,10 +150,10 @@ export function AppSidebar({
               <SidebarMenuItem>
                 <SidebarMenuButton
                   data-nav="create-project"
-                  className="h-10 gap-3 rounded-[var(--taskspace-radius-control)] border border-white/25 bg-white/10 px-3 text-[0.75rem] font-[760] text-white transition-colors hover:bg-white/20 hover:text-white data-[active=true]:border-white/25 data-[active=true]:bg-white/20 data-[active=true]:text-white"
+                  className="h-10 gap-3 rounded-[var(--taskspace-radius-control)] border border-white/25 bg-white/10 px-3 text-[length:var(--taskspace-font-size-body)] font-[var(--taskspace-weight-label)] text-white transition-colors hover:bg-white/20 hover:text-white data-[active=true]:border-white/25 data-[active=true]:bg-white/20 data-[active=true]:text-white"
                   onClick={openProject}
                 >
-                  <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-[#edff81] text-[#202550]">
+                  <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-[var(--taskspace-citron)] text-[var(--taskspace-ink)]">
                     <Plus className="size-4" strokeWidth={2.75} />
                   </span>
                   <span>New project</span>
@@ -164,7 +164,7 @@ export function AppSidebar({
         </SidebarGroup>
 
         <SidebarGroup className="pt-6">
-          <SidebarGroupLabel className="px-2 text-[0.62rem] font-[750] uppercase tracking-[0.08em] text-[#c9cdfd]">
+          <SidebarGroupLabel className="px-2 text-[length:var(--taskspace-font-size-micro)] font-[var(--taskspace-weight-label)] uppercase tracking-[var(--taskspace-tracking-label)] text-[var(--taskspace-on-cobalt-muted)]">
             Your work
           </SidebarGroupLabel>
           <SidebarGroupContent>
@@ -173,7 +173,7 @@ export function AppSidebar({
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
                     render={<Link href={item.href} />}
-                    className="h-[34px] gap-[9px] rounded-lg px-2.5 text-[0.74rem] font-[650] text-[#e1e3ff] hover:bg-white/10 hover:text-[#e1e3ff] data-[active=true]:bg-white/15"
+                    className="h-[34px] gap-[9px] rounded-lg px-2.5 text-[length:var(--taskspace-font-size-body)] font-[var(--taskspace-weight-nav)] text-[var(--taskspace-on-cobalt)] hover:bg-white/10 hover:text-[var(--taskspace-on-cobalt)] data-[active=true]:bg-white/15"
                   >
                     <item.icon className="size-[15px]" strokeWidth={1.8} />
                     <span>{item.title}</span>
@@ -183,7 +183,7 @@ export function AppSidebar({
               <SidebarMenuItem>
                 <SidebarMenuButton
                   render={<Link href="/invitations" />}
-                  className="h-[34px] gap-[9px] rounded-lg px-2.5 text-[0.74rem] font-[650] text-[#e1e3ff] hover:bg-white/10 hover:text-[#e1e3ff] data-[active=true]:bg-white/15"
+                  className="h-[34px] gap-[9px] rounded-lg px-2.5 text-[length:var(--taskspace-font-size-body)] font-[var(--taskspace-weight-nav)] text-[var(--taskspace-on-cobalt)] hover:bg-white/10 hover:text-[var(--taskspace-on-cobalt)] data-[active=true]:bg-white/15"
                 >
                   <Mail className="size-[15px]" strokeWidth={1.8} />
                   <span>Invitations</span>

@@ -217,3 +217,20 @@ export async function listTaskLabelIds(
     .where(eq(taskLabels.taskId, taskId));
   return rows.map((r) => r.labelId);
 }
+
+/**
+ * List every task-label link in one membership-scoped query. Project views use
+ * this instead of querying and authorising each task independently.
+ */
+export async function listTaskLabelIdsInProject(
+  actor: Actor,
+  projectId: string,
+): Promise<Array<{ taskId: string; labelId: string }>> {
+  await assertProjectAccess(actor, projectId);
+
+  return db
+    .select({ taskId: taskLabels.taskId, labelId: taskLabels.labelId })
+    .from(taskLabels)
+    .innerJoin(tasks, eq(tasks.id, taskLabels.taskId))
+    .where(eq(tasks.projectId, projectId));
+}

@@ -1,12 +1,12 @@
 "use client";
 
 import * as React from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import {
   Archive,
   ArchiveRestore,
+  Ellipsis,
   PencilLine,
-  Settings2,
   ShieldCheck,
   Users,
 } from "lucide-react";
@@ -15,9 +15,9 @@ import { toast } from "sonner";
 import type { ProjectDTO } from "@/lib/data-access";
 import {
   archiveProjectAction,
-  getProjectAction,
   restoreProjectAction,
 } from "@/lib/server-actions/projects";
+import { MemberAvatar } from "@/components/members/member-avatar";
 import { MembersDialog } from "@/components/members/members-dialog";
 import { ProjectEditDialog } from "./project-edit-dialog";
 import {
@@ -39,6 +39,40 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+type ProjectActivitySummary = {
+  actor: string;
+  action: string;
+  createdAt: string;
+};
+
+const ACTIVITY_COPY: Record<string, string> = {
+  task_created: "added a task",
+  task_updated: "updated a task",
+  task_completed: "completed a task",
+  task_reopened: "reopened a task",
+  task_deleted: "deleted a task",
+  task_assigned: "assigned a task",
+  task_unassigned: "unassigned a task",
+  comment_added: "added a comment",
+  member_invited: "invited a teammate",
+  member_accepted: "joined the project",
+};
+
+function relativeActivityTime(iso: string) {
+  const elapsed = Date.now() - new Date(iso).getTime();
+  const minutes = Math.max(0, Math.floor(elapsed / 60_000));
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  return new Date(iso).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+  });
+}
+
 /**
  * Project header + Owner-only manage menu (Task 0206).
  *
@@ -53,17 +87,29 @@ import {
  * stays the source of truth (mirrors the members surface). Ownership is decided
  * server-side (project:admin); the UI only gates what it exposes.
  */
-export function ProjectHeader({ userId }: { userId: string }) {
+export function ProjectHeader({
+  userId,
+  project: serverProject,
+  members = [],
+  latestActivity,
+}: {
+  userId: string;
+  project: ProjectDTO;
+  members?: Array<{
+    id: string;
+    name: string;
+    role: "owner" | "editor" | "viewer";
+  }>;
+  latestActivity?: ProjectActivitySummary | null;
+}) {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const projectId = searchParams.get("project");
-
-  const [project, setProject] = React.useState<ProjectDTO | null>(null);
-  const [error, setError] = React.useState<{
-    projectId: string;
-    message: string;
-  } | null>(null);
-  const [reloadKey, setReloadKey] = React.useState(0);
+  const [project, setProject] = React.useState<ProjectDTO>(serverProject);
+  const [previousServerProject, setPreviousServerProject] =
+    React.useState(serverProject);
+  if (previousServerProject !== serverProject) {
+    setPreviousServerProject(serverProject);
+    setProject(serverProject);
+  }
 
   // Dialogs owned by this header.
   const [editOpen, setEditOpen] = React.useState(false);
@@ -71,39 +117,12 @@ export function ProjectHeader({ userId }: { userId: string }) {
   const [archiveConfirm, setArchiveConfirm] = React.useState(false);
   const [busy, setBusy] = React.useState(false);
 
-  React.useEffect(() => {
-    if (!projectId) return;
-    let active = true;
-    getProjectAction(projectId).then((res) => {
-      if (!active) return;
-      if (res.ok) {
-        setProject(res.data);
-        setError(null);
-      } else {
-        setProject(null);
-        setError({
-          projectId,
-          message: res.error.message ?? "Couldn't load this project.",
-        });
-      }
-    });
-    return () => {
-      active = false;
-    };
-  }, [projectId, reloadKey]);
-
-  if (!projectId) return null;
-
-  // Loading is derived: we're loading whenever a project is selected but its
-  // data hasn't landed yet (so switching projects cleanly shows the skeleton
-  // instead of stale content or a stale error).
-  const loading =
-    projectId !== null &&
-    project?.id !== projectId &&
-    error?.projectId !== projectId;
-  const currentError = error?.projectId === projectId ? error.message : null;
-  const isOwner = project?.myRole === "owner";
-  const isArchived = project?.status === "archived";
+  const isOwner = project.myRole === "owner";
+  const isArchived = project.status === "archived";
+  const roleLabel = project.myRole
+    ? `${project.myRole.charAt(0).toUpperCase()}${project.myRole.slice(1)}`
+    : "Member";
+  const ownerName = members.find((member) => member.role === "owner")?.name;
 
   async function handleArchive() {
     if (!project) return;
@@ -136,44 +155,23 @@ export function ProjectHeader({ userId }: { userId: string }) {
     router.refresh();
   }
 
-  // --- Loading state -------------------------------------------------------
-  if (loading) {
-    return (
-      <div className="px-4 pb-5 pt-8 sm:px-9 sm:pt-9">
-        <div className="h-8 w-56 animate-pulse rounded-md bg-muted" />
-        <div className="mt-3 h-4 w-full max-w-md animate-pulse rounded bg-muted/70" />
-      </div>
-    );
-  }
-
-  // --- Error state ---------------------------------------------------------
-  if (!project || currentError) {
-    return (
-      <div className="border-b border-border/60 px-4 py-6 sm:px-8">
-        <p className="text-sm leading-6 text-muted-foreground">
-          {currentError ?? "Couldn't load this project."}
-        </p>
-      </div>
-    );
-  }
-
   // --- Archived (read-only) header ------------------------------------------
   if (isArchived) {
     return (
-      <div className="px-4 pb-5 pt-8 sm:px-9 sm:pt-9">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-2">
-              <h1 className="font-heading text-3xl font-semibold tracking-[-0.03em] text-foreground sm:text-4xl">
+      <div className="ts-gutter pb-[var(--taskspace-space-section)] pt-[var(--taskspace-space-content)]">
+        <div className="flex flex-col gap-[var(--taskspace-space-compact)] sm:flex-row sm:items-end sm:justify-between">
+          <div className="flex min-w-0 flex-col gap-[var(--taskspace-space-control)]">
+            <div className="flex flex-wrap items-center gap-[var(--taskspace-space-control)]">
+              <h1 className="ts-display">
                 {project.name}
               </h1>
-              <span className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-0.5 text-[0.62rem] font-[750] uppercase tracking-[0.08em] text-muted-foreground">
+              <span className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-0.5 text-[length:var(--taskspace-font-size-micro)] font-[var(--taskspace-weight-label)] uppercase tracking-[var(--taskspace-tracking-label)] text-muted-foreground">
                 <Archive className="size-3" />
                 Archived
               </span>
             </div>
             {project.description ? (
-              <p className="max-w-[570px] text-sm leading-6 text-muted-foreground">
+              <p className="ts-body max-w-[570px]">
                 {project.description}
               </p>
             ) : null}
@@ -191,7 +189,7 @@ export function ProjectHeader({ userId }: { userId: string }) {
             </Button>
           ) : null}
         </div>
-        <p className="mt-4 text-sm leading-6 text-muted-foreground">
+        <p className="ts-body mt-[var(--taskspace-space-compact)]">
           This project is archived and read-only. Restore it to bring it back
           into your active views.
         </p>
@@ -201,27 +199,39 @@ export function ProjectHeader({ userId }: { userId: string }) {
 
   // --- Active header + Owner-only manage menu --------------------------------
   return (
-    <div className="px-4 pb-2 pt-8 sm:px-9 sm:pt-9">
+    <div className="ts-gutter pb-[var(--taskspace-space-control)] pt-[var(--taskspace-space-content)]">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="font-heading text-[clamp(2rem,4vw,3.7rem)] font-semibold leading-[0.94] tracking-[-0.04em] text-foreground">
+          <h1 className="ts-display">
             {project.name}
           </h1>
           {project.description ? (
-            <p className="mt-3 max-w-[570px] text-sm leading-6 text-muted-foreground">
+            <p className="mt-[var(--taskspace-space-compact)] max-w-[570px] text-[length:var(--taskspace-font-size-lede)] leading-[1.55] text-[var(--taskspace-muted)]">
               {project.description}
             </p>
           ) : null}
         </div>
 
-        {isOwner ? (
-          <DropdownMenu>
+        <div className="flex shrink-0 items-center gap-[var(--taskspace-space-tight)]">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setMembersOpen(true)}
+            className="h-[33px] rounded-[var(--taskspace-radius-control)] px-[var(--taskspace-space-control)] text-[length:var(--taskspace-font-size-body)] font-bold"
+          >
+            <Users className="size-[15px]" />
+            Members
+          </Button>
+          {isOwner ? (
+            <DropdownMenu>
             <DropdownMenuTrigger
-              render={<Button variant="outline" size="sm" />}
-              className="shrink-0"
+              render={<Button variant="outline" size="icon-sm" />}
+              aria-label="Project options"
+              title="Project options"
+              className="h-[33px] w-[33px] shrink-0 rounded-[var(--taskspace-radius-control)]"
             >
-              <Settings2 className="size-4" />
-              Manage
+              <Ellipsis className="size-4" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" sideOffset={6} className="w-60">
               <DropdownMenuItem onClick={() => setEditOpen(true)}>
@@ -245,8 +255,47 @@ export function ProjectHeader({ userId }: { userId: string }) {
                 Archive project
               </DropdownMenuItem>
             </DropdownMenuContent>
-          </DropdownMenu>
-        ) : null}
+            </DropdownMenu>
+          ) : null}
+        </div>
+      </div>
+
+      <div className="mt-[var(--taskspace-space-section)] flex flex-wrap items-center gap-x-[var(--taskspace-space-compact)] gap-y-[var(--taskspace-space-control)] border-y border-border py-[var(--taskspace-space-compact)] text-[length:var(--taskspace-font-size-body)] font-semibold text-[var(--taskspace-muted)]">
+        <div className="flex items-center">
+          <div className="flex -space-x-2">
+            {members.slice(0, 4).map((member) => (
+              <MemberAvatar
+                key={member.id}
+                name={member.name}
+                isOwner={member.role === "owner"}
+                ringClassName="ring-[var(--taskspace-paper)]"
+                className="size-6"
+              />
+            ))}
+          </div>
+          <span className="ml-[var(--taskspace-space-tight)]">
+            {members.length} {members.length === 1 ? "member" : "members"}
+          </span>
+        </div>
+        <span>{ownerName ? `Owner: ${ownerName}` : `Your access: ${roleLabel}`}</span>
+        <span className="flex items-center gap-[var(--taskspace-space-tight)]">
+          <i className="size-1.5 rounded-full bg-[var(--taskspace-coral)]" aria-hidden="true" />
+          {latestActivity ? (
+            <>
+              {latestActivity.actor}{" "}
+              {ACTIVITY_COPY[latestActivity.action] ??
+                latestActivity.action.replaceAll("_", " ")}{" "}
+              <time
+                dateTime={latestActivity.createdAt}
+                suppressHydrationWarning
+              >
+                {relativeActivityTime(latestActivity.createdAt)}
+              </time>
+            </>
+          ) : (
+            "Shared project"
+          )}
+        </span>
       </div>
 
       <ProjectEditDialog
@@ -266,7 +315,7 @@ export function ProjectHeader({ userId }: { userId: string }) {
         onOpenChange={setMembersOpen}
         projectId={project.id}
         meUserId={userId}
-        onChanged={() => setReloadKey((k) => k + 1)}
+        onChanged={() => router.refresh()}
       />
 
       <AlertDialog

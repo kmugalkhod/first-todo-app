@@ -11,10 +11,12 @@ import {
   reorderTasks,
   setTaskLabels,
   updateTask,
+  updateTaskDetails,
 } from "@/lib/data-access";
 import type {
   CreateTaskInput,
   TaskDTO,
+  UpdateTaskDetailsInput,
   UpdateTaskInput,
 } from "@/lib/data-access";
 
@@ -38,7 +40,8 @@ export async function createTaskAction(
 ): Promise<ActionResult<TaskDTO>> {
   return toActionResult(async () => {
     const actor = await requireActor();
-    return createTask(actor, projectId, input);
+    const task = await createTask(actor, projectId, input);
+    return task;
   });
 }
 
@@ -46,7 +49,10 @@ export async function createTaskAction(
 export async function createInboxTaskAction(
   input: Pick<CreateTaskInput, "title" | "description" | "priority" | "scheduledFor">,
 ): Promise<ActionResult<TaskDTO>> {
-  return toActionResult(async () => createInboxTask(await requireActor(), input));
+  return toActionResult(async () => {
+    const task = await createInboxTask(await requireActor(), input);
+    return task;
+  });
 }
 
 /** Update editable task fields (title, description, priority, scheduling, …). */
@@ -56,7 +62,19 @@ export async function updateTaskAction(
 ): Promise<ActionResult<TaskDTO>> {
   return toActionResult(async () => {
     const actor = await requireActor();
-    return updateTask(actor, taskId, input);
+    const task = await updateTask(actor, taskId, input);
+    return task;
+  });
+}
+
+/** Save the complete project-task detail record atomically. */
+export async function updateTaskDetailsAction(
+  taskId: string,
+  input: UpdateTaskDetailsInput,
+): Promise<ActionResult<Awaited<ReturnType<typeof updateTaskDetails>>>> {
+  return toActionResult(async () => {
+    const actor = await requireActor();
+    return updateTaskDetails(actor, taskId, input);
   });
 }
 
@@ -91,7 +109,8 @@ export async function moveTaskToProjectAction(
 ): Promise<ActionResult<TaskDTO>> {
   return toActionResult(async () => {
     const actor = await requireActor();
-    return moveTaskToProject(actor, taskId, destinationProjectId);
+    const task = await moveTaskToProject(actor, taskId, destinationProjectId);
+    return task;
   });
 }
 
@@ -101,7 +120,8 @@ export async function completeTaskAction(
 ): Promise<ActionResult<TaskDTO>> {
   return toActionResult(async () => {
     const actor = await requireActor();
-    return completeTask(actor, taskId);
+    const task = await completeTask(actor, taskId);
+    return task;
   });
 }
 
@@ -111,7 +131,8 @@ export async function reopenTaskAction(
 ): Promise<ActionResult<TaskDTO>> {
   return toActionResult(async () => {
     const actor = await requireActor();
-    return reopenTask(actor, taskId);
+    const task = await reopenTask(actor, taskId);
+    return task;
   });
 }
 
@@ -122,7 +143,8 @@ export async function assignTaskAction(
 ): Promise<ActionResult<TaskDTO>> {
   return toActionResult(async () => {
     const actor = await requireActor();
-    return assignTask(actor, taskId, assigneeId);
+    const task = await assignTask(actor, taskId, assigneeId);
+    return task;
   });
 }
 
@@ -133,7 +155,8 @@ export async function setTaskLabelsAction(
 ): Promise<ActionResult<{ labelIds: string[] }>> {
   return toActionResult(async () => {
     const actor = await requireActor();
-    return setTaskLabels(actor, taskId, labelIds);
+    const result = await setTaskLabels(actor, taskId, labelIds);
+    return result;
   });
 }
 

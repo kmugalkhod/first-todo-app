@@ -92,6 +92,28 @@ export async function listCommentsForTask(
   return rows.map((r) => toCommentDTO(r.comments, r.authorName));
 }
 
+/**
+ * List a project's live comments in one membership-scoped query. This avoids
+ * an N+1 sequence of permission checks and database reads when rendering the
+ * shared workboard.
+ */
+export async function listCommentsInProject(
+  actor: Actor,
+  projectId: string,
+): Promise<CommentDTO[]> {
+  await assertProjectAccess(actor, projectId);
+
+  const rows = await db
+    .select({ comments, authorName: users.displayName })
+    .from(comments)
+    .innerJoin(tasks, eq(tasks.id, comments.taskId))
+    .leftJoin(users, eq(users.id, comments.authorId))
+    .where(and(eq(tasks.projectId, projectId), isNull(comments.deletedAt)))
+    .orderBy(asc(comments.createdAt));
+
+  return rows.map((row) => toCommentDTO(row.comments, row.authorName));
+}
+
 /** Resolve a comment's project + task for authorisation. */
 async function loadCommentScope(commentId: string) {
   const [comment] = await db

@@ -4,6 +4,7 @@ import { and, asc, eq, gte, ilike, inArray, isNull, lt, or } from "drizzle-orm";
 
 import {
   db,
+  labels,
   projectMemberships,
   projects,
   sections,
@@ -319,6 +320,20 @@ export type UpdateTaskInput = {
   position?: number;
 };
 
+export type UpdateTaskDetailsInput = {
+  title: string;
+  description: string | null;
+  priority: TaskPriority;
+  scheduledFor: Date | null;
+  assigneeId: string | null;
+  labelIds: string[];
+};
+
+export type UpdateTaskDetailsResult = {
+  task: TaskDTO;
+  labelIds: string[];
+};
+
 /** Update editable task fields (editor/owner). All inputs validated server-side. */
 export async function updateTask(
   actor: Actor,
@@ -376,6 +391,108 @@ export async function updateTask(
 
   const [row] = await db.select().from(tasks).where(eq(tasks.id, taskId)).limit(1);
   return toTaskDTO(row);
+}
+
+/**
+ * Save the complete editable task record in one transaction. The detail pane
+ * presents core fields, ownership and labels as one edit mode, so the server
+ * commits (or rejects) that mental model atomically.
+ */
+export async function updateTaskDetails(
+  actor: Actor,
+  taskId: string,
+  input: UpdateTaskDetailsInput,
+): Promise<UpdateTaskDetailsResult> {
+  const { task, projectId } = await loadTaskWithPermission(
+    actor,
+    taskId,
+    "task:write",
+  );
+  if (!projectId) {
+    throw new ForbiddenError(
+      "Move this Inbox task into a project before editing project properties.",
+    );
+  }
+
+  const title = input.title.trim();
+  if (!title) throw new ValidationError("Task title is required.");
+  if (!taskPriorityEnum.enumValues.includes(input.priority)) {
+    throw new ValidationError("Priority must be P1, P2, P3, or P4.");
+  }
+  if (input.assigneeId) {
+    await assertActiveMember(projectId, input.assigneeId);
+  }
+
+  const labelIds = [...new Set(input.labelIds)];
+  if (labelIds.length > 0) {
+    const projectLabels = await db
+      .select({ id: labels.id })
+      .from(labels)
+      .where(
+        and(eq(labels.projectId, projectId), inArray(labels.id, labelIds)),
+      );
+    if (projectLabels.length !== labelIds.length) {
+      throw new ValidationError(
+        "One or more labels do not belong to this project.",
+      );
+    }
+  }
+
+  const currentLabelRows = await db
+    .select({ labelId: taskLabels.labelId })
+    .from(taskLabels)
+    .where(eq(taskLabels.taskId, taskId));
+  const currentLabelIds = currentLabelRows.map((row) => row.labelId).sort();
+  const nextLabelIds = [...labelIds].sort();
+  const description = input.description?.trim() || null;
+  const changed = [
+    task.title !== title ? "title" : null,
+    task.description !== description ? "description" : null,
+    task.priority !== input.priority ? "priority" : null,
+    (task.scheduledFor?.getTime() ?? null) !==
+    (input.scheduledFor?.getTime() ?? null)
+      ? "scheduledFor"
+      : null,
+    task.assigneeId !== input.assigneeId ? "assigneeId" : null,
+    currentLabelIds.join("\u0000") !== nextLabelIds.join("\u0000")
+      ? "labels"
+      : null,
+  ].filter((field): field is string => field !== null);
+
+  if (changed.length > 0) {
+    const now = new Date();
+    await transaction(async (tx) => {
+      await tx
+        .update(tasks)
+        .set({
+          title,
+          description,
+          priority: input.priority,
+          scheduledFor: input.scheduledFor,
+          assigneeId: input.assigneeId,
+          updatedAt: now,
+        })
+        .where(eq(tasks.id, taskId));
+
+      await tx.delete(taskLabels).where(eq(taskLabels.taskId, taskId));
+      if (labelIds.length > 0) {
+        await tx
+          .insert(taskLabels)
+          .values(labelIds.map((labelId) => ({ taskId, labelId })));
+      }
+
+      await recordActivityInTx(tx, {
+        projectId,
+        actorId: actor.id,
+        action: "task_updated",
+        taskId,
+        metadata: { changed },
+      });
+    });
+  }
+
+  const [row] = await db.select().from(tasks).where(eq(tasks.id, taskId)).limit(1);
+  return { task: toTaskDTO(row), labelIds };
 }
 
 /** Reorder a section's direct tasks in one dense, deterministic transaction. */

@@ -97,27 +97,27 @@ export function ProjectEditDialog({
   }
 
   const fieldClass =
-    "mt-[5px] h-[38px] w-full rounded-[7px] border border-[#d8ddec] bg-white px-[9px] text-[0.75rem] text-[#202550] outline-none transition-colors placeholder:text-[#a1a7c4] focus-visible:border-[#a2aaef] focus-visible:ring-3 focus-visible:ring-[#ff765d]/35 disabled:cursor-not-allowed disabled:opacity-60";
+    "mt-[5px] h-[38px] w-full rounded-[var(--taskspace-radius-control)] border border-[var(--taskspace-line)] bg-white px-[9px] text-[length:var(--taskspace-font-size-body)] text-[var(--taskspace-ink)] outline-none transition-colors placeholder:text-[var(--taskspace-ink-faint)] focus-visible:border-[var(--taskspace-avatar-surface)] focus-visible:ring-3 focus-visible:ring-[var(--taskspace-coral)]/35 disabled:cursor-not-allowed disabled:opacity-60";
   const areaClass =
-    "mt-[5px] min-h-[96px] w-full resize-none rounded-[7px] border border-[#d8ddec] bg-white px-[9px] py-[9px] text-[0.75rem] text-[#202550] outline-none transition-colors placeholder:text-[#a1a7c4] focus-visible:border-[#a2aaef] focus-visible:ring-3 focus-visible:ring-[#ff765d]/35 disabled:cursor-not-allowed disabled:opacity-60";
+    "mt-[5px] min-h-[96px] w-full resize-none rounded-[var(--taskspace-radius-control)] border border-[var(--taskspace-line)] bg-white px-[9px] py-[9px] text-[length:var(--taskspace-font-size-body)] text-[var(--taskspace-ink)] outline-none transition-colors placeholder:text-[var(--taskspace-ink-faint)] focus-visible:border-[var(--taskspace-avatar-surface)] focus-visible:ring-3 focus-visible:ring-[var(--taskspace-coral)]/35 disabled:cursor-not-allowed disabled:opacity-60";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         showCloseButton={false}
-        className="w-full max-w-[460px] gap-0 rounded-[15px] border-0 bg-white p-6 text-[#202550] shadow-[0_30px_70px_-38px_#161946b3] sm:max-w-[460px]"
+        className="w-full max-w-[460px] gap-0 rounded-[var(--taskspace-radius-dialog)] border-0 bg-white p-6 text-[var(--taskspace-ink)] shadow-[0_30px_70px_-38px_#161946b3] sm:max-w-[460px]"
       >
-        <DialogTitle className="flex items-center gap-2 text-[1.5rem] leading-none font-[800] tracking-[-0.05em] text-[#202550]">
-          <PencilLine className="size-5 text-[#3543d6]" strokeWidth={2} />
+        <DialogTitle className="flex items-center gap-2 text-[length:var(--taskspace-font-size-title)] leading-none font-[var(--taskspace-weight-display)] tracking-[var(--taskspace-tracking-title)] text-[var(--taskspace-ink)]">
+          <PencilLine className="size-5 text-[var(--taskspace-cobalt)]" strokeWidth={2} />
           Edit project.
         </DialogTitle>
-        <DialogDescription className="mt-[7px] mb-[18px] text-[0.75rem] leading-[1.5] text-[#6f7792]">
+        <DialogDescription className="mt-[7px] mb-[18px] text-[length:var(--taskspace-font-size-body)] leading-[1.5] text-[var(--taskspace-muted)]">
           Rename the project or update its description. Only the owner can do
           this.
         </DialogDescription>
 
         <form onSubmit={handleSubmit} className="flex flex-col">
-          <label className="block text-[0.66rem] font-[750] text-[#56607e]">
+          <label className="block text-[length:var(--taskspace-font-size-meta)] font-[var(--taskspace-weight-label)] text-[var(--taskspace-ink-soft)]">
             Project name
             <input
               name="project"
@@ -132,7 +132,7 @@ export function ProjectEditDialog({
             />
           </label>
 
-          <label className="mt-3 block text-[0.66rem] font-[750] text-[#56607e]">
+          <label className="mt-3 block text-[length:var(--taskspace-font-size-meta)] font-[var(--taskspace-weight-label)] text-[var(--taskspace-ink-soft)]">
             Description{body.trim() ? ` (${body.trim().length})` : ""}
             <textarea
               name="description"
@@ -145,7 +145,7 @@ export function ProjectEditDialog({
           </label>
 
           {error && (
-            <p role="alert" className="mt-3 text-[0.7rem] font-medium text-[#ff765d]">
+            <p role="alert" className="mt-3 text-[length:var(--taskspace-font-size-meta)] font-medium text-[var(--taskspace-coral)]">
               {error}
             </p>
           )}
@@ -155,14 +155,14 @@ export function ProjectEditDialog({
               type="button"
               onClick={() => onOpenChange(false)}
               disabled={pending}
-              className="h-[35px] rounded-[7px] border border-[#d9ddea] bg-white px-3 text-[0.69rem] font-[760] text-[#66708c] transition-colors hover:bg-[#f7f8ff] disabled:cursor-not-allowed disabled:opacity-60"
+              className="h-[35px] rounded-[var(--taskspace-radius-control)] border border-[var(--taskspace-line)] bg-white px-3 text-[length:var(--taskspace-font-size-meta)] font-[var(--taskspace-weight-label)] text-[var(--taskspace-muted)] transition-colors hover:bg-[var(--taskspace-selected-surface)] disabled:cursor-not-allowed disabled:opacity-60"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={!canSubmit}
-              className="h-[35px] rounded-[7px] border-0 bg-[#3543d6] px-3 text-[0.69rem] font-[760] text-white transition-colors hover:bg-[#252d95] disabled:cursor-not-allowed disabled:opacity-50"
+              className="h-[35px] rounded-[var(--taskspace-radius-control)] border-0 bg-[var(--taskspace-cobalt)] px-3 text-[length:var(--taskspace-font-size-meta)] font-[var(--taskspace-weight-label)] text-white transition-colors hover:bg-[var(--taskspace-cobalt-deep)] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {pending ? "Saving…" : "Save changes"}
             </button>

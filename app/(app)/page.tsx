@@ -8,16 +8,22 @@ import {
   listInboxTasks,
   listLabelsInProject,
   listActivity,
-  listCommentsForTask,
+  listCommentsInProject,
   listMembers,
   listSections,
-  listTaskLabelIds,
+  listTaskLabelIdsInProject,
   listTasksInProject,
   listProjectsForActor,
   searchAccessibleWork,
 } from "@/lib/data-access";
 import { Taskspace } from "@/components/taskspace/taskspace";
 import { DailyTaskList } from "@/components/taskspace/daily-task-list";
+import { SearchView } from "@/components/taskspace/search-view";
+import {
+  EmptyState,
+  PageContainer,
+  PageHeader,
+} from "@/components/ui/page-shell";
 import { TimezoneSync } from "@/components/taskspace/timezone-sync";
 import type { TaskGroup, TaskRowData } from "@/components/taskspace/types";
 import { localDayBounds } from "@/lib/date-boundaries";
@@ -72,25 +78,26 @@ export default async function TaskspaceHome({
   }
   if (view === "search") {
     const result = q ? await searchAccessibleWork(actor, q) : { projects: [], tasks: [] };
-    return <main className="px-4 py-6 sm:px-8"><h1 className="font-heading text-3xl tracking-[-0.04em] text-foreground">Search</h1><form className="mt-5"><label className="sr-only" htmlFor="work-search">Search accessible tasks and projects</label><input id="work-search" name="q" defaultValue={q ?? ""} placeholder="Search tasks and projects" className="w-full max-w-md rounded-md border border-input bg-background px-3 py-2 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--taskspace-coral)]" /></form>{q ? <><h2 className="mt-8 text-sm font-semibold">Projects</h2>{result.projects.length ? <ul className="mt-2 text-sm">{result.projects.map((item) => <li key={item.id}><a className="text-primary underline" href={`/?project=${item.id}`}>{item.name}</a></li>)}</ul> : <p className="mt-2 text-sm text-muted-foreground">No accessible projects match.</p>}<div className="mt-6"><DailyTaskList title="Tasks" description="" tasks={basicRows(result.tasks)} empty="No accessible tasks match." /></div></> : <p className="mt-5 text-sm text-muted-foreground">Search task titles, descriptions, and project names.</p>}</main>;
+    return (
+      <SearchView
+        query={q}
+        projects={result.projects.map((item) => ({ id: item.id, name: item.name }))}
+        tasks={basicRows(result.tasks)}
+      />
+    );
   }
 
   // No project selected yet — prompt the actor to pick one from the sidebar.
   if (!projectId) {
     return (
-      <main className="mx-auto w-full max-w-[1200px] px-4 py-10 sm:px-8">
-        <div className="flex flex-col items-start gap-3 rounded-2xl border border-dashed border-border bg-card p-8">
-          <span className="flex size-11 items-center justify-center rounded-full bg-muted text-muted-foreground">
-            <FolderKanban className="size-5" />
-          </span>
-          <h1 className="font-heading text-xl font-semibold tracking-[-0.02em] text-foreground">
-            Choose a project to get started
-          </h1>
-          <p className="max-w-md text-sm leading-6 text-muted-foreground">
-            Pick a project from the sidebar to see and organise its tasks, or
-            create a new project with the &ldquo;New project&rdquo; button.
-          </p>
-        </div>
+      <main>
+        <PageContainer width="wide">
+          <EmptyState
+            icon={<FolderKanban className="size-5" />}
+            title="Choose a project to get started"
+            description="Pick a project from the sidebar to see and organise its tasks, or create a new project with the “New project” button."
+          />
+        </PageContainer>
       </main>
     );
   }
@@ -109,32 +116,68 @@ export default async function TaskspaceHome({
       listTasksInProject(actor, projectId, { includeCompleted: true }),
     ]);
   } catch {
-    return <main className="px-4 py-10 sm:px-9"><section className="max-w-xl border-y border-dashed border-border py-10"><h1 className="font-heading text-2xl tracking-[-0.04em] text-foreground">Your project couldn’t load.</h1><p className="mt-3 text-sm leading-6 text-muted-foreground">Refresh the page to retry. Your work has not been changed.</p></section></main>;
+    return (
+      <main>
+        <PageContainer width="wide">
+          <PageHeader
+            kicker="Taskspace"
+            title="Your project couldn't load."
+            description="Refresh the page to retry. Your work has not been changed."
+          />
+        </PageContainer>
+      </main>
+    );
   }
 
   // Non-members / archived content falls back to the "pick a project" prompt.
   if (!loadedProject || loadedProject.status === "archived") {
     return (
-      <main className="mx-auto w-full max-w-[1200px] px-4 py-10 sm:px-8">
-        <div className="flex flex-col items-start gap-3 rounded-2xl border border-dashed border-border bg-card p-8">
-          <h1 className="font-heading text-xl font-semibold tracking-[-0.02em] text-foreground">
-            This project isn&apos;t available
-          </h1>
-          <p className="max-w-md text-sm leading-6 text-muted-foreground">
-            It may have been archived or you may no longer be a member. Pick
-            another project from the sidebar.
-          </p>
-        </div>
+      <main>
+        <PageContainer width="wide">
+          <EmptyState
+            icon={<FolderKanban className="size-5" />}
+            title="This project isn't available"
+            description="It may have been archived or you may no longer be a member. Pick another project from the sidebar."
+          />
+        </PageContainer>
       </main>
     );
   }
 
-  const [labels, members, activity] = await Promise.all([
+  const [labels, members, activity, taskLabelIds, comments] = await Promise.all([
     listLabelsInProject(actor, projectId).catch(() => []),
     listMembers(actor, projectId).catch(() => []),
     listActivity(actor, projectId, { limit: 100 }).catch(() => []),
+    listTaskLabelIdsInProject(actor, projectId).catch(() => []),
+    listCommentsInProject(actor, projectId).catch(() => []),
   ]);
   const labelById = new Map(labels.map((label) => [label.id, label]));
+  const labelIdsByTask = new Map<string, string[]>();
+  for (const { taskId, labelId } of taskLabelIds) {
+    const labelIds = labelIdsByTask.get(taskId) ?? [];
+    labelIds.push(labelId);
+    labelIdsByTask.set(taskId, labelIds);
+  }
+  const commentsByTask = new Map<string, typeof comments>();
+  for (const comment of comments) {
+    const taskComments = commentsByTask.get(comment.taskId) ?? [];
+    taskComments.push(comment);
+    commentsByTask.set(comment.taskId, taskComments);
+  }
+  const childrenByParent = new Map<string, typeof tasks>();
+  for (const child of tasks) {
+    if (!child.parentTaskId) continue;
+    const children = childrenByParent.get(child.parentTaskId) ?? [];
+    children.push(child);
+    childrenByParent.set(child.parentTaskId, children);
+  }
+  const activityByTask = new Map<string, typeof activity>();
+  for (const event of activity) {
+    if (!event.taskId) continue;
+    const taskActivity = activityByTask.get(event.taskId) ?? [];
+    if (taskActivity.length < 8) taskActivity.push(event);
+    activityByTask.set(event.taskId, taskActivity);
+  }
   const activeMemberById = new Map(
     members
       .filter((member) => member.status === "active")
@@ -142,55 +185,78 @@ export default async function TaskspaceHome({
   );
   const todayStart = startOfToday();
 
-  const rows: TaskRowData[] = await Promise.all(
-    tasks.map(async (task) => {
-      const [labelIds, comments] = await Promise.all([
-        listTaskLabelIds(actor, task.id).catch(() => []),
-        listCommentsForTask(actor, task.id).catch(() => []),
-      ]);
-      const ownerRow = task.assigneeId
-        ? activeMemberById.get(task.assigneeId)
-        : undefined;
-      return {
-        id: task.id,
-        title: task.title,
-        description: task.description,
-        status: task.status,
-        priority: task.priority,
-        labels: labelIds
-          .map((id) => labelById.get(id))
-          .filter((label): label is NonNullable<typeof label> => !!label)
-          .map((label) => ({ id: label.id, name: label.name })),
-        sectionId: task.sectionId,
-        parentTaskId: task.parentTaskId,
-        subtaskProgress: (() => { const children = tasks.filter((child) => child.parentTaskId === task.id); return children.length ? { completed: children.filter((child) => child.status === "completed").length, total: children.length } : undefined; })(),
-        subtasks: tasks.filter((child) => child.parentTaskId === task.id).map((child) => ({ id: child.id, title: child.title, status: child.status })),
-        comments: comments.map((comment) => ({ id: comment.id, authorId: comment.author?.id ?? null, author: comment.author?.name ?? "Unknown member", body: comment.body, createdAt: comment.createdAt.toISOString() })),
-        activity: activity.filter((event) => event.taskId === task.id).slice(0, 8).map((event) => ({ id: event.id, actor: event.actor?.name ?? "Unknown member", action: event.action.replaceAll("_", " "), createdAt: event.createdAt.toISOString() })),
-        scheduledFor: task.scheduledFor
-          ? task.scheduledFor.toISOString()
-          : null,
-        overdue:
-          task.status === "active" &&
-          task.scheduledFor != null &&
-          task.scheduledFor.getTime() < todayStart,
-        owner: ownerRow
-          ? { id: ownerRow.userId, name: ownerRow.name ?? ownerRow.email }
-          : null,
-      };
-    }),
-  );
+  const rows: TaskRowData[] = tasks.map((task) => {
+    const labelIds = labelIdsByTask.get(task.id) ?? [];
+    const taskComments = commentsByTask.get(task.id) ?? [];
+    const children = childrenByParent.get(task.id) ?? [];
+    const taskActivity = activityByTask.get(task.id) ?? [];
+    const ownerRow = task.assigneeId
+      ? activeMemberById.get(task.assigneeId)
+      : undefined;
+    return {
+      id: task.id,
+      title: task.title,
+      description: task.description,
+      status: task.status,
+      priority: task.priority,
+      labels: labelIds
+        .map((id) => labelById.get(id))
+        .filter((label): label is NonNullable<typeof label> => !!label)
+        .map((label) => ({ id: label.id, name: label.name })),
+      sectionId: task.sectionId,
+      parentTaskId: task.parentTaskId,
+      subtaskProgress: children.length
+        ? {
+            completed: children.filter((child) => child.status === "completed").length,
+            total: children.length,
+          }
+        : undefined,
+      subtasks: children.map((child) => ({
+        id: child.id,
+        title: child.title,
+        status: child.status,
+      })),
+      comments: taskComments.map((comment) => ({
+        id: comment.id,
+        authorId: comment.author?.id ?? null,
+        author: comment.author?.name ?? "Unknown member",
+        body: comment.body,
+        createdAt: comment.createdAt.toISOString(),
+      })),
+      activity: taskActivity.map((event) => ({
+        id: event.id,
+        actor: event.actor?.name ?? "Unknown member",
+        action: event.action.replaceAll("_", " "),
+        createdAt: event.createdAt.toISOString(),
+      })),
+      scheduledFor: task.scheduledFor
+        ? task.scheduledFor.toISOString()
+        : null,
+      overdue:
+        task.status === "active" &&
+        task.scheduledFor != null &&
+        task.scheduledFor.getTime() < todayStart,
+      owner: ownerRow
+        ? { id: ownerRow.userId, name: ownerRow.name ?? ownerRow.email }
+        : null,
+    };
+  });
 
   // Order follows the server list (by position, then createdAt). Group into
   // project sections, plus a catch-all for tasks the actor didn't file away.
+  // Child tasks belong in their parent's detail record, not alongside parents
+  // in the project workboard. Keeping this list to direct tasks also prevents
+  // newly created subtasks from appearing as duplicate top-level work.
+  const directRows = rows.filter((row) => row.parentTaskId == null);
+
   const groups: TaskGroup[] = sections.map((section) => ({
     key: section.id,
     sectionId: section.id,
     label: section.name,
-    tasks: rows.filter((row) => row.sectionId === section.id),
+    tasks: directRows.filter((row) => row.sectionId === section.id),
   }));
 
-  const unsectioned = rows.filter((row) => row.sectionId == null);
+  const unsectioned = directRows.filter((row) => row.sectionId == null);
   if (unsectioned.length > 0) {
     groups.push({
       key: "unsectioned",
@@ -214,11 +280,18 @@ export default async function TaskspaceHome({
         key={projectId}
         projectId={projectId}
         projectName={loadedProject.name}
+        project={loadedProject}
         meUserId={user.id}
         canEdit={canEdit}
         groups={groups}
+        taskRecords={rows}
         labels={labels.map((label) => ({ id: label.id, name: label.name }))}
-        members={members.filter((member) => member.status === "active").map((member) => ({ id: member.userId, name: member.name ?? member.email }))}
+        members={members.filter((member) => member.status === "active").map((member) => ({ id: member.userId, name: member.name ?? member.email, role: member.role }))}
+        latestActivity={activity[0] ? {
+          actor: activity[0].actor?.name ?? "A teammate",
+          action: activity[0].action,
+          createdAt: activity[0].createdAt.toISOString(),
+        } : null}
         canModerateComments={loadedProject.myRole === "owner"}
       />
     </main>

@@ -43,15 +43,15 @@ export function MemberAvatar({
         "shrink-0 ring-2",
         ringClassName,
         isOwner
-          ? "bg-[#edff81] text-[#202550]"
-          : "bg-[#a9b0ee] text-[#202550]",
+          ? "bg-[var(--taskspace-citron)] text-[var(--taskspace-ink)]"
+          : "bg-[var(--taskspace-avatar-surface)] text-[var(--taskspace-ink)]",
         className,
       )}
     >
       <AvatarFallback
         className={cn(
-          "rounded-full text-[0.6rem] font-[800]",
-          isOwner ? "bg-[#edff81] text-[#202550]" : "bg-[#a9b0ee] text-[#202550]",
+          "rounded-full text-[length:var(--taskspace-font-size-chip)] font-[var(--taskspace-weight-display)]",
+          isOwner ? "bg-[var(--taskspace-citron)] text-[var(--taskspace-ink)]" : "bg-[var(--taskspace-avatar-surface)] text-[var(--taskspace-ink)]",
         )}
       >
         {memberInitials(name, email)}

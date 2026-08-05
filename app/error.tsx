@@ -1,6 +1,38 @@
 "use client";
 
-/** Keeps an unexpected route error recoverable without replacing the root layout. */
-export default function RouteError({ reset }: { error: Error & { digest?: string }; reset: () => void }) {
-  return <main className="mx-auto flex min-h-[70vh] max-w-xl flex-col justify-center bg-background p-6 text-foreground"><p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Taskspace</p><h1 className="mt-3 font-heading text-3xl tracking-[-0.04em]">We couldn’t open this workspace.</h1><p className="mt-3 text-sm leading-6 text-muted-foreground">Nothing you entered was lost. Try loading the page again.</p><button type="button" onClick={reset} className="mt-6 w-fit rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--taskspace-coral)]">Try again</button></main>;
+import { Button } from "@/components/ui/button";
+import { PageContainer, PageHeader } from "@/components/ui/page-shell";
+
+/**
+ * Keeps an unexpected route error recoverable without replacing the root
+ * layout. It reuses the shared page furniture so a failure still looks like
+ * Taskspace rather than an unstyled fallback.
+ */
+export default function RouteError({
+  reset,
+}: {
+  error: Error & { digest?: string };
+  reset: () => void;
+}) {
+  return (
+    <main className="flex min-h-svh items-center bg-[var(--taskspace-canvas)]">
+      <PageContainer>
+        <div className="ts-panel p-[var(--taskspace-space-section)] sm:p-[var(--taskspace-space-content)]">
+          <PageHeader
+            kicker="Taskspace"
+            title="We couldn't open this workspace."
+            description="Nothing you entered was lost. Try loading the page again."
+          />
+          <Button
+            type="button"
+            size="lg"
+            onClick={reset}
+            className="mt-[var(--taskspace-space-section)] rounded-[var(--taskspace-radius-control)]"
+          >
+            Try again
+          </Button>
+        </div>
+      </PageContainer>
+    </main>
+  );
 }

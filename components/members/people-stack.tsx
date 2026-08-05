@@ -42,7 +42,7 @@ export function PeopleStack({
         {showCount && hidden > 0 ? (
           <span
             className={cn(
-              "relative z-10 -ml-2 flex size-[23px] items-center justify-center rounded-full bg-[#a9b0ee] text-[0.55rem] font-[800] text-[#202550] ring-2",
+              "relative z-10 -ml-2 flex size-[23px] items-center justify-center rounded-full bg-[var(--taskspace-avatar-surface)] text-[length:var(--taskspace-font-size-chip)] font-[var(--taskspace-weight-display)] text-[var(--taskspace-ink)] ring-2",
               ringClassName,
             )}
           >

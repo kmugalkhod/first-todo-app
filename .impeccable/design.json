@@ -19,17 +19,24 @@
     "typographyMeta": {
       "display": { "displayName": "Project Display", "purpose": "Orienting project names and primary page headings." },
       "title": { "displayName": "Record Title", "purpose": "Selected task titles in the live detail record." },
+      "page": { "displayName": "Secondary Page Title", "purpose": "Calmer display title for invitations, errors and supporting pages." },
+      "section": { "displayName": "Section Heading", "purpose": "System-sans task section names that lead a group without competing with the project title." },
       "body": { "displayName": "Operational Body", "purpose": "Descriptions, comments, and readable task context." },
+      "lede": { "displayName": "Project Lede", "purpose": "The single supporting sentence below a project or primary page name." },
       "label": { "displayName": "System Label", "purpose": "Small navigation groups and section kickers." }
     },
     "shadows": [
       { "name": "application-shell", "value": "0 30px 70px -44px #191c5366", "purpose": "Frames the desktop application over the cool canvas." },
       { "name": "floating-dialog", "value": "0 30px 70px -38px #161946b3", "purpose": "Separates the project creation dialog from the modal overlay." },
       { "name": "toast", "value": "0 18px 42px -24px #191b4585", "purpose": "Lifts transient feedback above the workspace." },
-      { "name": "mobile-sheet", "value": "0 -20px 50px -35px #1c1f4a8c", "purpose": "Defines the task-detail sheet on small screens." }
+      { "name": "mobile-sheet", "value": "0 -20px 50px -35px #1c1f4a8c", "purpose": "Defines the task-detail sheet on small screens." },
+      { "name": "mobile-tray", "value": "0 16px 36px -22px #171a5b", "purpose": "Separates the fixed mobile workspace navigation from the canvas." }
     ],
     "motion": [
-      { "name": "toast-enter", "value": "opacity .18s ease, transform .18s ease", "purpose": "The toast rises 12px into view and fades in." }
+      { "name": "toast-enter", "value": "opacity .18s ease, transform .18s ease", "purpose": "The toast rises 12px into view and fades in." },
+      { "name": "fast-feedback", "value": "140ms", "cssVariable": "--taskspace-motion-fast", "purpose": "Hover, press and selected-state feedback." },
+      { "name": "record-panel", "value": "220ms", "cssVariable": "--taskspace-motion-panel", "purpose": "Selected-record and unified-edit transitions." },
+      { "name": "ease-out", "value": "cubic-bezier(0.16, 1, 0.3, 1)", "cssVariable": "--taskspace-ease-out", "purpose": "Shared exponential ease-out for authored motion." }
     ],
     "breakpoints": [
       { "name": "compact-desktop", "value": "1050px" },
@@ -40,7 +47,34 @@
       { "name": "chip", "value": "5px", "cssVariable": "--taskspace-radius-chip" },
       { "name": "input", "value": "6px", "cssVariable": "--taskspace-radius-input" },
       { "name": "control", "value": "8px", "cssVariable": "--taskspace-radius-control" },
-      { "name": "panel", "value": "10px", "cssVariable": "--taskspace-radius-panel" }
+      { "name": "panel", "value": "10px", "cssVariable": "--taskspace-radius-panel" },
+      { "name": "mobile-tray", "value": "12px", "cssVariable": "--taskspace-radius-mobile-tray" },
+      { "name": "mobile-sheet", "value": "17px", "cssVariable": "--taskspace-radius-mobile-sheet" }
+    ],
+    "typeTokens": [
+      { "name": "display", "value": "clamp(2rem, 4vw, 3.7rem)", "cssVariable": "--taskspace-font-size-display" },
+      { "name": "page", "value": "clamp(1.7rem, 3vw, 2.3rem)", "cssVariable": "--taskspace-font-size-page" },
+      { "name": "lede", "value": "0.83rem", "cssVariable": "--taskspace-font-size-lede" },
+      { "name": "section", "value": "0.95rem", "cssVariable": "--taskspace-font-size-section" }
+    ],
+    "spacingTokens": [
+      { "name": "micro", "value": "2px", "cssVariable": "--taskspace-space-micro" },
+      { "name": "tight", "value": "7px", "cssVariable": "--taskspace-space-tight" },
+      { "name": "control", "value": "9px", "cssVariable": "--taskspace-space-control" },
+      { "name": "compact", "value": "12px", "cssVariable": "--taskspace-space-compact" },
+      { "name": "section", "value": "22px", "cssVariable": "--taskspace-space-section" },
+      { "name": "content", "value": "36px", "cssVariable": "--taskspace-space-content" },
+      { "name": "topbar", "value": "66px", "cssVariable": "--taskspace-topbar-height" }
+    ],
+    "priorityTokens": [
+      { "name": "p1-surface", "value": "#fff0ed", "cssVariable": "--taskspace-priority-p1-surface" },
+      { "name": "p1-ink", "value": "#b74c3a", "cssVariable": "--taskspace-priority-p1-ink" },
+      { "name": "p2-surface", "value": "#fff6d8", "cssVariable": "--taskspace-priority-p2-surface" },
+      { "name": "p2-ink", "value": "#90701c", "cssVariable": "--taskspace-priority-p2-ink" },
+      { "name": "p3-surface", "value": "#eef0ff", "cssVariable": "--taskspace-priority-p3-surface" },
+      { "name": "p3-ink", "value": "#5963ae", "cssVariable": "--taskspace-priority-p3-ink" },
+      { "name": "p4-surface", "value": "#eff2f4", "cssVariable": "--taskspace-priority-p4-surface" },
+      { "name": "p4-ink", "value": "#6e7887", "cssVariable": "--taskspace-priority-p4-ink" }
     ]
   },
   "components": [

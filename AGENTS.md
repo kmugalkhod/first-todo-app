@@ -149,9 +149,11 @@ for magic-link + sign-out.
 
 - **`components/ui/`** = shadcn/base-ui primitives (button, dialog, dropdown, sidebar,
   avatar, sheet, sonner, …). **`components/sidebar/`** = app sidebar domain (`app-sidebar`,
-  `project-nav`, `create-project-dialog`). Other app components (`invitation-decision-buttons`,
-  `sign-out-button`, `theme-provider`) live in `components/`. **`feature/components/`** =
-  feature-domain pieces (`ModeToggle`).
+  `project-nav`, `create-project-dialog`). **`components/taskspace/`** = workboard domain
+  (daily list, task rows/detail, capture context, search view, selection helpers and global
+  workspace shortcuts). Other app components (`invitation-decision-buttons`, `sign-out-button`,
+  `theme-provider`) live in `components/`. **`feature/components/`** = feature-domain pieces
+  (`ModeToggle`).
 - **Design tokens** are defined in `app/globals.css` (`@theme inline` maps shadcn vars;
   sidebar = cobalt `#3543d6`, `--sidebar-primary` = citron `#edff81`, `--sidebar-ring` =
   coral `#ff765d`). **Use tokens, never hard-coded off-palette hex.** The `impeccable`
