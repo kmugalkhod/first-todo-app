@@ -266,11 +266,11 @@ export function MembersDialog({
 
         {canManage ? (
           <form onSubmit={handleInvite} className="space-y-2.5">
-            <p className="flex items-center gap-1.5 text-[0.62rem] font-[750] uppercase tracking-[0.08em] text-muted-foreground">
+            <p className="flex items-center gap-1.5 text-[length:var(--taskspace-font-size-micro)] font-[var(--taskspace-weight-label)] uppercase tracking-[var(--taskspace-tracking-label)] text-muted-foreground">
               <UserPlus className="size-3.5" />
               Invite a collaborator
             </p>
-            <label className="block text-[0.66rem] font-[750] text-[#56607e]">
+            <label className="block text-[length:var(--taskspace-font-size-meta)] font-[var(--taskspace-weight-label)] text-[var(--taskspace-ink-soft)]">
               Email address
               <Input
                 id="member-email"
@@ -279,10 +279,10 @@ export function MembersDialog({
                 placeholder="name@example.com"
                 value={inviteEmail}
                 onChange={(e) => setInviteEmail(e.target.value)}
-                className="mt-[5px] h-[38px] w-full rounded-[7px] border border-[#d8ddec] bg-white px-[9px] text-[0.75rem] text-[#202550] outline-none placeholder:text-[#a1a7c4] focus-visible:border-[#a2aaef] focus-visible:ring-3 focus-visible:ring-[#ff765d]/35"
+                className="mt-[5px] h-[38px] w-full rounded-[var(--taskspace-radius-control)] border border-[var(--taskspace-line)] bg-white px-[9px] text-[length:var(--taskspace-font-size-body)] text-[var(--taskspace-ink)] outline-none placeholder:text-[var(--taskspace-ink-faint)] focus-visible:border-[var(--taskspace-avatar-surface)] focus-visible:ring-3 focus-visible:ring-[var(--taskspace-coral)]/35"
               />
             </label>
-            <label className="block text-[0.66rem] font-[750] text-[#56607e]">
+            <label className="block text-[length:var(--taskspace-font-size-meta)] font-[var(--taskspace-weight-label)] text-[var(--taskspace-ink-soft)]">
               Role
               <select
                 id="member-role"
@@ -290,7 +290,7 @@ export function MembersDialog({
                 onChange={(e) =>
                   setInviteRole(e.target.value as "editor" | "viewer")
                 }
-                className="mt-[5px] h-[38px] w-full cursor-pointer rounded-[7px] border border-[#d8ddec] bg-white px-[9px] text-[0.75rem] text-[#202550] outline-none focus-visible:border-[#a2aaef] focus-visible:ring-3 focus-visible:ring-[#ff765d]/35"
+                className="mt-[5px] h-[38px] w-full cursor-pointer rounded-[var(--taskspace-radius-control)] border border-[var(--taskspace-line)] bg-white px-[9px] text-[length:var(--taskspace-font-size-body)] text-[var(--taskspace-ink)] outline-none focus-visible:border-[var(--taskspace-avatar-surface)] focus-visible:ring-3 focus-visible:ring-[var(--taskspace-coral)]/35"
               >
                 <option value="editor">Editor — can edit tasks and sections</option>
                 <option value="viewer">Viewer — can view and comment</option>
@@ -299,7 +299,7 @@ export function MembersDialog({
             <Button
               type="submit"
               disabled={inviting || !inviteEmail.trim()}
-              className="h-[35px] w-full rounded-[7px] bg-[#3543d6] px-3 text-[0.72rem] font-[760] text-white transition-colors hover:bg-[#252d95] disabled:cursor-not-allowed disabled:opacity-50"
+              className="h-[35px] w-full rounded-[var(--taskspace-radius-control)] bg-[var(--taskspace-cobalt)] px-3 text-[length:var(--taskspace-font-size-body)] font-[var(--taskspace-weight-label)] text-white transition-colors hover:bg-[var(--taskspace-cobalt-deep)] disabled:cursor-not-allowed disabled:opacity-50"
             >
               <UserPlus className="size-3.5" />
               {inviting ? "Sending…" : "Send invitation"}
@@ -309,7 +309,7 @@ export function MembersDialog({
 
         <div className="space-y-4">
           <section>
-            <p className="mb-1.5 flex items-center justify-between text-[0.62rem] font-[750] uppercase tracking-[0.08em] text-muted-foreground">
+            <p className="mb-1.5 flex items-center justify-between text-[length:var(--taskspace-font-size-micro)] font-[var(--taskspace-weight-label)] uppercase tracking-[var(--taskspace-tracking-label)] text-muted-foreground">
               <span>Members ({activeMembers.length})</span>
               <MemberAvatar
                 name={me?.name ?? me?.email}
@@ -348,7 +348,7 @@ export function MembersDialog({
                             <span className="text-xs font-normal text-muted-foreground">(you)</span>
                           ) : null}
                           {member.role === "owner" ? (
-                            <Crown className="size-3 shrink-0 text-[#edff81]" />
+                            <Crown className="size-3 shrink-0 text-[var(--taskspace-citron)]" />
                           ) : null}
                         </p>
                         <p className="truncate text-xs text-muted-foreground">
@@ -421,7 +421,7 @@ export function MembersDialog({
           </section>
 
           <section>
-            <p className="mb-1.5 flex items-center gap-1.5 text-[0.62rem] font-[750] uppercase tracking-[0.08em] text-muted-foreground">
+            <p className="mb-1.5 flex items-center gap-1.5 text-[length:var(--taskspace-font-size-micro)] font-[var(--taskspace-weight-label)] uppercase tracking-[var(--taskspace-tracking-label)] text-muted-foreground">
               <Mail className="size-3.5" />
               Pending invitations ({invitations.length})
             </p>

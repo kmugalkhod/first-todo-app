@@ -78,33 +78,33 @@ export default function SignInPage() {
               </span>
               Taskspace
             </div>
-            <h1 className="mt-20 max-w-sm font-heading text-[clamp(2.5rem,5vw,4.5rem)] font-semibold leading-[0.9] tracking-[-0.04em]">
+            <h1 className="mt-[var(--taskspace-space-content)] max-w-sm font-heading text-[clamp(2.5rem,5vw,4.5rem)] font-[var(--taskspace-weight-display)] leading-[0.94] tracking-[var(--taskspace-tracking-display)]">
               Make the next move clear.
             </h1>
           </div>
-          <p className="max-w-xs text-sm leading-6 text-white/75">
+          <p className="ts-body max-w-xs text-white/75">
             A shared workboard for the decisions, owners, and next steps that keep a project moving.
           </p>
         </section>
         <div className="w-full p-6 sm:p-10 md:flex md:min-h-[560px] md:flex-col md:justify-center">
-        <p className="text-[0.62rem] font-[760] uppercase tracking-[0.08em] text-[var(--taskspace-cobalt)] md:hidden">Taskspace</p>
-        <h2 className="mt-2 font-heading text-[clamp(2rem,4vw,3rem)] font-semibold leading-[0.94] tracking-[-0.04em] text-foreground md:mt-0">
+        <p className="text-[length:var(--taskspace-font-size-micro)] font-[var(--taskspace-weight-label)] uppercase tracking-[var(--taskspace-tracking-label)] text-[var(--taskspace-cobalt)] md:hidden">Taskspace</p>
+        <h2 className="ts-display mt-[var(--taskspace-space-control)] md:mt-0">
           {sent ? "Check your inbox" : "Sign in"}
         </h2>
-        <p className="mt-2 text-sm leading-6 text-muted-foreground">
+        <p className="ts-body mt-[var(--taskspace-space-control)]">
           {sent
             ? "We emailed you a sign-in link. It expires in 10 minutes."
             : "Enter your email and we will send you a magic link to sign in."}
         </p>
 
         {sent ? (
-          <Button type="button" variant="ghost" className="mt-6 w-full" onClick={() => setSent(false)}>
+          <Button type="button" variant="ghost" className="mt-[var(--taskspace-space-section)] w-full" onClick={() => setSent(false)}>
             Use a different email
           </Button>
         ) : (
-          <form onSubmit={submitMagicLink} className="mt-6 flex flex-col gap-4">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="email" className="text-sm font-medium">Email</Label>
+          <form onSubmit={submitMagicLink} className="mt-[var(--taskspace-space-section)] flex flex-col gap-[var(--taskspace-space-compact)]">
+            <div className="flex flex-col gap-[var(--taskspace-space-tight)]">
+              <Label htmlFor="email" className="ts-label">Email</Label>
               <Input
                 id="email"
                 type="email"
@@ -117,7 +117,7 @@ export default function SignInPage() {
               />
             </div>
             {error ? (
-              <p role="alert" className="text-sm text-destructive">{error}</p>
+              <p role="alert" className="ts-body text-[var(--taskspace-priority-p1-ink)]">{error}</p>
             ) : null}
             <Button type="submit" disabled={loading} className="h-11 rounded-[var(--taskspace-radius-control)]">
               {loading ? "Sending…" : "Email me a sign-in link"}

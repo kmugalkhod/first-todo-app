@@ -67,7 +67,7 @@ export function InvitationDecisionButtons({
         type="button"
         disabled={busy !== null}
         onClick={() => decide("accept")}
-        className="h-10 rounded-[7px] bg-[#3543d6] px-3.5 text-[0.72rem] font-[760] text-white transition-colors hover:bg-[#252d95] sm:h-[35px]"
+        className="h-10 rounded-[var(--taskspace-radius-control)] bg-[var(--taskspace-cobalt)] px-3.5 text-[length:var(--taskspace-font-size-body)] font-[var(--taskspace-weight-label)] text-white transition-colors hover:bg-[var(--taskspace-cobalt-deep)] sm:h-[35px]"
       >
         <Check className="size-3.5" />
         {busy === "accept" ? "Joining…" : "Accept invitation"}
@@ -77,7 +77,7 @@ export function InvitationDecisionButtons({
         variant="outline"
         disabled={busy !== null}
         onClick={() => decide("decline")}
-        className="h-10 rounded-[7px] border border-[#d9ddea] bg-white px-3.5 text-[0.72rem] font-[760] text-[#66708c] transition-colors hover:bg-[#f7f8ff] sm:h-[35px]"
+        className="h-10 rounded-[var(--taskspace-radius-control)] border border-[var(--taskspace-line)] bg-white px-3.5 text-[length:var(--taskspace-font-size-body)] font-[var(--taskspace-weight-label)] text-[var(--taskspace-muted)] transition-colors hover:bg-[var(--taskspace-selected-surface)] sm:h-[35px]"
       >
         <X className="size-3.5" />
         {busy === "decline" ? "Declining…" : "Decline"}

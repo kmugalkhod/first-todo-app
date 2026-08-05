@@ -5,8 +5,12 @@ import { Search } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { listProjectsForActor, type ProjectDTO } from "@/lib/data-access";
 import { AppSidebar } from "@/components/sidebar/app-sidebar";
+import { MobileWorkNav } from "@/components/sidebar/mobile-work-nav";
+import { ProjectBreadcrumb } from "@/components/sidebar/project-breadcrumb";
 import { ProjectNav } from "@/components/sidebar/project-nav";
 import { TaskCaptureButton } from "@/components/taskspace/task-capture-button";
+import { TaskCaptureProvider } from "@/components/taskspace/task-capture-context";
+import { WorkspaceShortcuts } from "@/components/taskspace/workspace-shortcuts";
 import {
   SidebarInset,
   SidebarProvider,
@@ -58,25 +62,31 @@ export default async function ProtectedLayout({
   }
 
   return (
-    <SidebarProvider style={{ "--sidebar-width": "238px" } as CSSProperties} className="taskspace-shell bg-[var(--taskspace-canvas)] md:p-5">
+    <SidebarProvider style={{ "--sidebar-width": "238px" } as CSSProperties} className="taskspace-shell bg-[var(--taskspace-canvas)]">
       <AppSidebar user={user}>
         <ProjectNav projects={projects} archived={archived} error={error} />
       </AppSidebar>
-      <SidebarInset className="min-h-svh bg-background md:min-h-[calc(100svh-2.5rem)] md:rounded-r-[var(--taskspace-radius-shell)] md:shadow-[var(--taskspace-shell-shadow)]">
-        <header className="taskspace-topbar flex min-h-[66px] shrink-0 items-center gap-3 border-b border-border bg-[var(--taskspace-paper)] px-4 sm:px-7">
-          <SidebarTrigger className="taskspace-sidebar-trigger size-9 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground" />
-          <p className="hidden text-[0.62rem] font-[760] uppercase tracking-[0.08em] text-muted-foreground md:block">Projects</p>
-          <form action="/" className="relative ml-auto w-full max-w-80 sm:w-[min(320px,30vw)]">
-            <input type="hidden" name="view" value="search" />
-            <label className="sr-only" htmlFor="workspace-search">Search tasks and projects</label>
-            <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-2.5 size-3.5 text-muted-foreground" />
-            <input id="workspace-search" name="q" type="search" placeholder="Search tasks and projects" className="h-[35px] w-full rounded-md border border-border bg-background py-0 pl-8 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--taskspace-coral)]" />
-          </form>
-          <TaskCaptureButton />
-        </header>
-        <div className="flex-1">
-          {children}
-        </div>
+      <SidebarInset className="min-h-svh bg-background">
+        <TaskCaptureProvider>
+          <WorkspaceShortcuts />
+          <header className="taskspace-topbar flex min-h-[66px] shrink-0 items-center gap-3 border-b border-border bg-[var(--taskspace-paper)] px-4 sm:px-7">
+            <span className="taskspace-mobile-mark relative size-[15px] shrink-0 rotate-45 rounded-[var(--taskspace-radius-chip)] bg-[var(--taskspace-cobalt)] shadow-[6px_6px_0_-3px_var(--taskspace-citron)]" aria-hidden="true" />
+            <SidebarTrigger className="taskspace-sidebar-trigger size-9 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground" />
+            <ProjectBreadcrumb projects={projects ?? []} />
+            <form action="/" className="relative ml-auto w-full max-w-80 sm:w-[min(320px,30vw)]">
+              <input type="hidden" name="view" value="search" />
+              <label className="sr-only" htmlFor="workspace-search">Search tasks and projects</label>
+              <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-2.5 size-3.5 text-muted-foreground" />
+              <input id="workspace-search" name="q" type="search" aria-keyshortcuts="/" placeholder="Search tasks and projects" className="h-[35px] w-full rounded-[var(--taskspace-radius-control)] border border-border bg-background py-0 pl-8 pr-9 text-[length:var(--taskspace-font-size-body)] text-foreground placeholder:text-muted-foreground transition-[border-color,background-color] [transition-duration:var(--taskspace-motion-fast)] focus-visible:border-[var(--taskspace-cobalt)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--taskspace-coral)]" />
+              <kbd aria-hidden="true" className="pointer-events-none absolute right-2.5 top-2 flex size-5 items-center justify-center rounded-[var(--taskspace-radius-chip)] border border-border bg-[var(--taskspace-paper)] text-[length:var(--taskspace-font-size-micro)] font-extrabold text-[var(--taskspace-muted)]">/</kbd>
+            </form>
+            <TaskCaptureButton />
+          </header>
+          <div className="flex-1 pb-[76px] min-[801px]:pb-0">
+            {children}
+          </div>
+        </TaskCaptureProvider>
+        <MobileWorkNav />
       </SidebarInset>
     </SidebarProvider>
   );

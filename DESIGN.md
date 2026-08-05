@@ -26,9 +26,25 @@ typography:
     fontWeight: 800
     lineHeight: 1.06
     letterSpacing: "-0.048em"
+  page:
+    fontFamily: "ArchivoDisplay, Aptos, Segoe UI Variable, sans-serif"
+    fontSize: "clamp(1.7rem, 3vw, 2.3rem)"
+    fontWeight: 800
+    lineHeight: 1
+    letterSpacing: "-0.048em"
+  section:
+    fontFamily: "Aptos, Segoe UI Variable, ui-sans-serif, system-ui, sans-serif"
+    fontSize: "0.95rem"
+    fontWeight: 700
+    lineHeight: 1.2
+    letterSpacing: "-0.025em"
   body:
     fontFamily: "Aptos, Segoe UI Variable, ui-sans-serif, system-ui, sans-serif"
     fontSize: "0.75rem"
+    lineHeight: 1.55
+  lede:
+    fontFamily: "Aptos, Segoe UI Variable, ui-sans-serif, system-ui, sans-serif"
+    fontSize: "0.83rem"
     lineHeight: 1.55
   label:
     fontFamily: "Aptos, Segoe UI Variable, ui-sans-serif, system-ui, sans-serif"
@@ -42,6 +58,8 @@ rounded:
   panel: "10px"
   dialog: "15px"
   shell: "18px"
+  mobile-tray: "12px"
+  mobile-sheet: "17px"
 spacing:
   micro: "2px"
   tight: "7px"
@@ -49,6 +67,11 @@ spacing:
   compact: "12px"
   section: "22px"
   content: "36px"
+  topbar: "66px"
+motion:
+  fast: "140ms"
+  panel: "220ms"
+  easeOut: "cubic-bezier(0.16, 1, 0.3, 1)"
 components:
   button-primary:
     backgroundColor: "{colors.cobalt}"
@@ -136,7 +159,7 @@ The palette is a role-driven workspace system: cool blue establishes place, pale
 
 - **Display:** Use for the primary project heading; it is large, tightly tracked, and set with a short line height.
 - **Title:** Use for the selected task record heading; it inherits the display family at a smaller, similarly compact scale.
-- **Section heading:** Use a restrained, bold system label for task sections and detail subsections.
+- **Section heading:** Use a restrained, bold system label at `0.95rem` for task sections and a body-weight `0.75rem` heading for record subsections.
 - **Body:** Use for descriptions and comments; keep the looser line height for reading context.
 - **Label:** Use small, weighty, letter-spaced text for navigation groups and task-record kickers. Uppercase only where the existing kicker convention calls for it.
 
@@ -150,7 +173,11 @@ The shell narrows at the existing 1050px breakpoint by reducing sidebar and pane
 
 **The Coexisting Context Rule.** On wide screens, preserve the task list and selected record side by side. Do not make the record a route or modal when both can coexist.
 
-The shared component radii are exposed as `--taskspace-radius-chip` (5px), `--taskspace-radius-input` (6px), `--taskspace-radius-control` (8px), and `--taskspace-radius-panel` (10px).
+The shared component radii are exposed as `--taskspace-radius-chip` (5px), `--taskspace-radius-input` (6px), `--taskspace-radius-control` (8px), `--taskspace-radius-panel` (10px), and `--taskspace-radius-mobile-tray` (12px).
+
+The shared spacing scale is exposed as `--taskspace-space-micro` (2px), `--taskspace-space-tight` (7px), `--taskspace-space-control` (9px), `--taskspace-space-compact` (12px), `--taskspace-space-section` (22px), and `--taskspace-space-content` (36px). Use these tokens to keep project/list/detail rhythm coherent.
+
+Interaction feedback uses `--taskspace-motion-fast` (140ms) for control state changes and `--taskspace-motion-panel` (220ms) for the selected record, both with the shared exponential `--taskspace-ease-out`. Motion must be disabled when the user requests reduced motion.
 
 ## Elevation & Depth
 
@@ -162,6 +189,7 @@ This is a mostly flat workspace with structural borders and tonal shifts doing t
 - **Dialog:** `0 30px 70px -38px #161946b3` lifts the project-creation form above its dimmed overlay.
 - **Toast:** `0 18px 42px -24px #191b4585` lets feedback float without becoming a card stack.
 - **Mobile detail sheet:** `0 -20px 50px -35px #1c1f4a8c` clarifies that task context has temporarily layered above the list.
+- **Mobile navigation tray:** `0 16px 36px -22px #171a5b` keeps the fixed deep-cobalt tray legible above the mobile canvas.
 
 **The Flat-Until-Floating Rule.** Ordinary sections, rows, and controls use borders and soft surface changes, not elevation.
 
@@ -203,6 +231,8 @@ Borders are thin and cool-toned. Selected task rows gain a soft rounded highligh
 
 - **Priority:** Short, bold, low-radius labels with semantic pale backgrounds; P1 is coral-tinted, P2 is warm yellow, P3 is periwinkle, and P4 is cool gray.
 - **Tag:** A separate green-tinted label for work category. Keep tags descriptive rather than action-like.
+
+Priority surfaces are semantic tokens rather than reused accent colors: `--taskspace-priority-p1-surface` / `-ink` = `#fff0ed` / `#b74c3a`; P2 = `#fff6d8` / `#90701c`; P3 = `#eef0ff` / `#5963ae`; P4 = `#eff2f4` / `#6e7887`.
 
 ### Detail Record
 

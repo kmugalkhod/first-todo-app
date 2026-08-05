@@ -62,6 +62,16 @@ export function priorityLabel(priority: TaskRowPriority): string {
   return PRIORITY_LABEL[priority];
 }
 
+/** Shared semantic treatment for scan-first priority pills. */
+export function priorityPillClass(priority: TaskRowPriority): string {
+  return {
+    p1: "bg-[var(--taskspace-priority-p1-surface)] text-[var(--taskspace-priority-p1-ink)]",
+    p2: "bg-[var(--taskspace-priority-p2-surface)] text-[var(--taskspace-priority-p2-ink)]",
+    p3: "bg-[var(--taskspace-priority-p3-surface)] text-[var(--taskspace-priority-p3-ink)]",
+    p4: "bg-[var(--taskspace-priority-p4-surface)] text-[var(--taskspace-priority-p4-ink)]",
+  }[priority];
+}
+
 function startOfDay(date: Date): Date {
   const copy = new Date(date);
   copy.setHours(0, 0, 0, 0);

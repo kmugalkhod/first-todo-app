@@ -63,7 +63,7 @@ export function MembersSection({ meUserId }: { meUserId: string }) {
   return (
     <div className="px-2 pb-3">
       <div className="flex items-center justify-between gap-2 px-2">
-        <p className="flex items-center gap-1.5 text-[0.62rem] font-[750] uppercase tracking-[0.08em] text-[#c9cdfd]">
+        <p className="flex items-center gap-1.5 text-[length:var(--taskspace-font-size-micro)] font-[var(--taskspace-weight-label)] uppercase tracking-[var(--taskspace-tracking-label)] text-[var(--taskspace-on-cobalt-muted)]">
           <Users className="size-3.5" />
           People
         </p>
@@ -72,7 +72,7 @@ export function MembersSection({ meUserId }: { meUserId: string }) {
           onClick={openDialog}
           aria-label="Manage members"
           title={projectId ? "Manage members" : "Select a project to manage members"}
-          className="flex items-center gap-1 rounded-md p-1 text-[0.62rem] font-[700] text-[#c9cdfd] transition-colors hover:bg-white/10 hover:text-white"
+          className="flex items-center gap-1 rounded-md p-1 text-[length:var(--taskspace-font-size-micro)] font-[var(--taskspace-weight-section)] text-[var(--taskspace-on-cobalt-muted)] transition-colors hover:bg-white/10 hover:text-white"
         >
           <Settings2 className="size-3.5" />
           Manage
@@ -82,7 +82,7 @@ export function MembersSection({ meUserId }: { meUserId: string }) {
       {projectId ? (
         <div className="pl-3.5 pt-2">
           {members.length === 0 ? (
-            <p className="text-xs leading-5 text-[#c9cdfd]/75">
+            <p className="text-xs leading-5 text-[var(--taskspace-on-cobalt-muted)]/75">
               Loading members…
             </p>
           ) : (
@@ -94,9 +94,9 @@ export function MembersSection({ meUserId }: { meUserId: string }) {
               <PeopleStack
                 members={shownMembers}
                 max={4}
-                ringClassName="ring-[#3543d6]"
+                ringClassName="ring-[var(--taskspace-cobalt)]"
               />
-              <span className="min-w-0 flex-1 truncate text-xs text-[#c9cdfd]">
+              <span className="min-w-0 flex-1 truncate text-xs text-[var(--taskspace-on-cobalt-muted)]">
                 {activeCount} {activeCount === 1 ? "member" : "members"}
                 {isOwner ? " · you’re the owner" : ""}
               </span>
@@ -104,7 +104,7 @@ export function MembersSection({ meUserId }: { meUserId: string }) {
           )}
         </div>
       ) : (
-        <p className="pl-3.5 pt-1 text-xs leading-5 text-[#c9cdfd]/75">
+        <p className="pl-3.5 pt-1 text-xs leading-5 text-[var(--taskspace-on-cobalt-muted)]/75">
           No project selected.
         </p>
       )}
